@@ -1,4 +1,5 @@
 import json
+from statistics import mode
 import requests
 from tkinter import *
 from tkinter import messagebox
@@ -28,12 +29,12 @@ class Application(Frame):
         self.page_label = Label(self,text='查询页数').grid(row=0,column=4)
         self.page_choice = StringVar(self)
         self.page_choice.set('1')
-        self.PAGE = OptionMenu(self,self.page_choice,'1','2','3','4','5','6','7','8','9','10','15','20','30','40','50','60','70','80','90','100','200','300','500','1000')
+        self.PAGE = OptionMenu(self,self.page_choice,'1','2','3','4','5','10','15','20','30','50','80','100','200','300','500','1000')
         self.PAGE.grid(row=0,column=5)
         self.mode_label = Label(self,text='模式').grid(row=0,column=6)
         self.mode_choice = StringVar(self)
-        self.mode_choice.set('host_search')
-        self.MODE = OptionMenu(self,self.mode_choice,'host_search','domain_ip')
+        self.mode_choice.set('主机搜索')
+        self.MODE = OptionMenu(self,self.mode_choice,'主机搜索','域名/IP','个人信息')
         self.MODE.grid(row=0,column=7)
         self.START = Button(self,text='一键查询',command=self.thread)
         self.START.grid(row=0,column=8)
@@ -95,20 +96,21 @@ class Application(Frame):
         self.log_insert(f"Access_Token: {self.headers['Authorization']}\n")
     
     def thread(self):
-        if self.QUERY.get() != "" and self.FILE.get() != "":
+        if self.QUERY.get() != "" and self.FILE.get() != "" or self.mode_choice.get() == "个人信息":
             t1 = Thread(target=self.run,daemon=True)
             t1.start()
         else:
             messagebox.showerror(title='Error',message='Query or FilePath empty!')
 
     def run(self):
-        self.delete_tree(self.TREEVIEW)
+        if self.mode_choice.get() != '个人信息':
+            self.delete_tree(self.TREEVIEW)
         self.info_list = []
         self.login()
         self.log_insert('Start searching...\n')
         query = self.QUERY.get().replace(" ",'%20')
 
-        if self.mode_choice.get() == 'host_search':
+        if self.mode_choice.get() == '主机搜索':
             self.host_search(query=query,page=self.page_choice.get(),thread=int(self.thread_choice.get()))
             j = 1
             with open(self.FILE.get(),"w") as f:
@@ -118,7 +120,7 @@ class Application(Frame):
                     f.write(f"{each_dic['ip']}:{each_dic['port']},{each_dic['country']},{each_dic['os']},{each_dic['hostname']}\n")
                     j += 1
                     
-        if self.mode_choice.get() == 'domain_ip':
+        if self.mode_choice.get() == '域名/IP':
             self.domain_ip(query=query,page=self.page_choice.get(),thread=int(self.thread_choice.get()))
             j = 1
             with open(self.FILE.get(),"w") as f:
@@ -127,8 +129,13 @@ class Application(Frame):
                     self.TREEVIEW.insert("",END,values=(j,each_dic['ip'],each_dic['name'],None))
                     f.write(f"{each_dic['ip']} {each_dic['name']}\n")
                     j += 1
-        self.log_insert(f'Complete information has been stored into {self.FILE.get()}.\n')
-        self.resource()
+
+        if self.mode_choice.get() == '个人信息':
+            self.resource(mode="complete")
+
+        if self.mode_choice.get() != "个人信息":
+            self.log_insert(f'Complete information has been stored into {self.FILE.get()}.\n')
+            self.resource(mode="easy")
 
     def host_search(self, query, page, thread):
         with ThreadPoolExecutor(thread) as t:
@@ -183,15 +190,26 @@ class Application(Frame):
                 print  ()
                 self.log_insert(f'[-] info : {str(e.message)}\n')
         
-    def resource(self):     # user_info
+    def resource(self,mode):     # user_info
         resp = requests.get('https://api.zoomeye.org/resources-info', headers=self.headers)
         last = resp.json()['resources']['search']
-        self.log_insert(f"[!] Your account's Remaining query quota: {last} (this month).\n")
-        
+        if mode == "easy":
+            self.log_insert(f"[!] Your account's Remaining query quota: {last} (this month).\n")
+        elif mode == "complete":
+            inteval = resp.json()['resources']['interval']
+            uname = resp.json()['user_info']['name']
+            role = resp.json()['user_info']['role']
+            expired_at = resp.json()['user_info']['expired_at']
+            remain_free_quota = resp.json()['quota_info']['remain_free_quota']
+            remain_pay_quota = resp.json()['quota_info']['remain_pay_quota']
+            remain_total_quota = resp.json()['quota_info']['remain_total_quota']
+            self.log_insert(f'[+] Name: {uname}\n[+] Role: {role}\n[+] Intevel: {inteval}\n[+] Expired_at: {expired_at}\n[+] Remain_free_quota: {remain_free_quota}\n[+] Remain_pay_quota: {remain_pay_quota}\n[+] Remain_total_quota: {remain_total_quota}\n')
 
 if __name__=='__main__':
     root = Tk()
     root.geometry('640x404+450+100')
-    root.title('ThunderSearch v1.2')
+    root.maxsize(width=640,height=404)
+    root.minsize(width=640,height=404)
+    root.title('ThunderSearch v1.3')
     Application(master=root)
     root.mainloop()
