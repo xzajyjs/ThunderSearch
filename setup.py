@@ -10,7 +10,7 @@ from setuptools import setup
 APP = ['ThunderSearch.py']
 DATA_FILES = []
 OPTIONS = {
-    'iconfile':'LOGO.icns'
+    'iconfile':'LOGO.jpeg'
 }
 
 setup(
