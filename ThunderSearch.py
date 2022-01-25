@@ -230,6 +230,6 @@ if __name__=='__main__':
     root.geometry('718x497+350+100')
     root.maxsize(width=718,height=497)
     root.minsize(width=718,height=497)
-    root.title('ThunderSearch v1.5')
+    root.title('ThunderSearch v1.5.1')
     Application(master=root)
     root.mainloop()
