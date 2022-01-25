@@ -1,5 +1,4 @@
 import json
-from pandas import wide_to_long
 import requests
 from tkinter import *
 from tkinter import messagebox
