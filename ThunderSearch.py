@@ -1,5 +1,6 @@
 import json
 import requests
+from os import system
 from tkinter import *
 from tkinter import messagebox
 from tkinter.ttk import Treeview
@@ -9,6 +10,7 @@ class Application(Frame):
     def __init__(self, master):
         super().__init__(master)
         self.master=master
+        self.delete_access_token()
         self.createWidget()
         self.pack()
         
@@ -68,6 +70,12 @@ class Application(Frame):
         x = tree.get_children()
         for item in x:
             tree.delete(item)
+    
+    def delete_access_token(self):
+        try:
+            system("rm access_token.txt")
+        except:
+            return None
 
     def log_insert(self,str):       # update log
         self.LOG.insert(END,chars=str)
