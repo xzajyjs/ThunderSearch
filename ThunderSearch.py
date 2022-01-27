@@ -107,9 +107,7 @@ class Application(Frame):
                             self.user_pass_login(username=user_data['username'],password=user_data['password'])
                         else:
                             raise Exception('Username/Password Empty')
-            except FileNotFoundError:       # config.json load fail.
-                self.log_insert('[!] File "config.json" not found!\n')
-            except Exception:
+            except (Exception,FileNotFoundError):
                 self.log_insert('[!] Fail to login with "config.json"\n')
                 if self.login_mode_choice.get() == "账号密码":
                     self.log_insert("Fail to find access_token.txt. Need to Login now.\n")
