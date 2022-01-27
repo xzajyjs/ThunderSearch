@@ -2,9 +2,9 @@ import json
 import requests
 from os import system
 from tkinter import *
+from threading import Thread
 from tkinter import messagebox
 from tkinter.ttk import Treeview
-from threading import Thread
 from concurrent.futures import ThreadPoolExecutor
 class Application(Frame):
     def __init__(self, master):
@@ -21,7 +21,7 @@ class Application(Frame):
         self.LOGIN_MODE = OptionMenu(self,self.login_mode_choice,'账号密码','API-KEY')
         self.LOGIN_MODE.grid(row=1,column=0)
         self.api_label = Label(self,text='API-KEY:').grid(row=2,column=0)
-        self.API = Entry(self,width=21,borderwidth=1)
+        self.API = Entry(self,width=21,borderwidth=1,show='*')
         self.API.grid(row=2,column=1,columnspan=2)
         self.u_label = Label(self, text='账号:').grid(row=0,column=1)
         self.p_label = Label(self, text='密码:').grid(row=1,column=1)
@@ -66,6 +66,9 @@ class Application(Frame):
         self.LOG = Text(self,relief=SOLID,borderwidth=1,height=15,width=98)
         self.LOG.grid(row=4,column=0,columnspan=10)
 
+        self.log_insert("@Author: xzajyjs\n@E-mail: xuziang16@gmail.com\n@Repository: https://github.com/xzajyjs/ThunderSearch\n")
+        self.log_insert("[-] If you log in through 'config.json', it will read the API-KEY first\n")
+
     def delete_tree(self,tree):
         x = tree.get_children()
         for item in x:
@@ -82,39 +85,68 @@ class Application(Frame):
         self.LOG.see(END)
 
     def login(self):
-        try:
-            with open("access_token.txt", "r") as f:
+        try:    # access_token exists.
+            with open("access_token.txt","r",encoding="utf-8") as f:
                 access_token = f.read().strip('\n')
-            self.log_insert("Load file 'access_token.txt' successfully.\n")
-        except FileNotFoundError:
-            if self.login_mode_choice.get() == "账号密码":
-                self.log_insert("Fail to find access_token.txt. Need to Login now.\n")
-                url = 'https://api.zoomeye.org/user/login'
-                data = {
-                    'username':self.USERNAME.get().strip(),
-                    'password':self.PASSWORD.get().strip()
-                }
-                encoded_data = json.dumps(data)
-                resp_json = requests.post(url, encoded_data).json()
-                try:
-                    access_token = resp_json['access_token']
-                except:
-                    self.log_insert(f'[-] Login fail. {resp_json["message"]}\n')
-                else:
-                    self.log_insert('[+] Login success!\n')
-                    with open("access_token.txt", "w") as f:
-                        f.write(access_token)
                 self.headers = {
                     'Authorization':'JWT ' + access_token
                 }
-                print(self.headers['Authorization'])
-                self.log_insert(f"[+] Access_Token: {self.headers['Authorization']}\n")
+            print(self.headers['Authorization'])
+            self.log_insert("Load file 'access_token.txt' successfully.\n")
+            self.log_insert(f"[+] Access_Token: {self.headers['Authorization'][:7]+'*'*10+self.headers['Authorization'][-3:]}\n")
+        except FileNotFoundError:   # access_token not exists.
+            try:    # config.json load successfully.
+                with open("config.json","r",encoding="utf-8") as f:
+                    user_data = json.load(f)
+                    if user_data['API-KEY'] != "":
+                        self.log_insert('Try to login with API-KEY in config.json.\n')
+                        self.api_key_login(api_key=user_data['API-KEY'])
+                    else:
+                        if user_data['username'] != "" and user_data['password'] != "":
+                            self.log_insert('Try to login with username/password in config.json.\n')
+                            self.user_pass_login(username=user_data['username'],password=user_data['password'])
+                        else:
+                            raise Exception('Username/Password Empty')
+            except FileNotFoundError:       # config.json load fail.
+                self.log_insert('[!] File "config.json" not found!\n')
+            except Exception:
+                self.log_insert('[!] Fail to login with "config.json"\n')
+                if self.login_mode_choice.get() == "账号密码":
+                    self.log_insert("Fail to find access_token.txt. Need to Login now.\n")
+                    username = self.USERNAME.get().strip()
+                    password = self.PASSWORD.get().strip()
+                    self.user_pass_login(username=username,password=password)
+                elif self.login_mode_choice.get() == "API-KEY":
+                    key = self.API.get().strip()
+                    self.api_key_login(api_key=key)
 
-            elif self.login_mode_choice.get() == "API-KEY":
-                self.headers = {
-                    "API-KEY":self.API.get().strip()
-                }
-                self.log_insert(f"[+] API-KEY: {self.headers['API-KEY']}\n")
+    def api_key_login(self,api_key):
+        self.headers = {
+            "API-KEY":api_key
+        }
+        self.log_insert(f"[+] API-KEY: {api_key[:5]+'*'*10+api_key[-5:]}\n")
+
+    def user_pass_login(self,username,password):
+        url = 'https://api.zoomeye.org/user/login'
+        data = {
+            'username':username,
+            'password':password
+        }
+        encoded_data = json.dumps(data)
+        resp_json = requests.post(url, encoded_data).json()
+        try:
+            access_token = resp_json['access_token']
+        except:
+            self.log_insert(f'[-] Login fail. {resp_json["message"]}\n')
+        else:
+            self.log_insert('[+] Login success!\n')
+            with open("access_token.txt","w",encoding="utf-8") as f:
+                f.write(access_token)
+        self.headers = {
+            'Authorization':'JWT ' + access_token
+        }
+        print(self.headers['Authorization'])
+        self.log_insert(f"[+] Access_Token: {self.headers['Authorization'][:7]+'*'*10+self.headers['Authorization'][-3:]}\n")
 
     def thread(self):
         if self.QUERY.get() != "" and self.FILE.get() != "" or self.query_mode_choice.get() == "个人信息":
@@ -134,7 +166,7 @@ class Application(Frame):
         if self.query_mode_choice.get() == '主机搜索':
             self.host_search(query=query,page=self.page_choice.get(),thread=int(self.thread_choice.get()))
             j = 1
-            with open(self.FILE.get(),"w") as f:
+            with open(self.FILE.get(),"w",encoding="utf-8") as f:
                 f.write("ip:port\tcountry\tos\thostname\n")
                 for each_dic in self.info_list:
                     self.TREEVIEW.insert("",END,values=(j,each_dic['ip'],each_dic['port'],each_dic['os']))
@@ -144,7 +176,7 @@ class Application(Frame):
         if self.query_mode_choice.get() == '域名/IP':
             self.domain_ip(query=query,page=self.page_choice.get(),thread=int(self.thread_choice.get()))
             j = 1
-            with open(self.FILE.get(),"w") as f:
+            with open(self.FILE.get(),"w",encoding="utf-8") as f:
                 f.write("ip\tdomain\n")
                 for each_dic in self.info_list:
                     self.TREEVIEW.insert("",END,values=(j,each_dic['ip'],each_dic['name'],None))
@@ -225,11 +257,12 @@ class Application(Frame):
             remain_total_quota = resp.json()['quota_info']['remain_total_quota']
             self.log_insert(f'[+] Name: {uname}\n[+] Role: {role}\n[+] Intevel: {inteval}\n[+] Expired_at: {expired_at}\n[+] Remain_free_quota: {remain_free_quota}\n[+] Remain_pay_quota: {remain_pay_quota}\n[+] Remain_total_quota: {remain_total_quota}\n')
 
+
 if __name__=='__main__':
     root = Tk()
     root.geometry('718x497+350+100')
     root.maxsize(width=718,height=497)
     root.minsize(width=718,height=497)
-    root.title('ThunderSearch v1.5.1')
+    root.title('ThunderSearch v1.6    --xzajyjs')
     Application(master=root)
     root.mainloop()
