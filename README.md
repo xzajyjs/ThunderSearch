@@ -51,8 +51,4 @@ pip install -r requirements.txt
 
 ![](ThunderSearch.png)
 
-![](ThunderSearch2.png)
-
-![](ThunderSearch3.png)
-
 ![](https://serverless-page-bucket-lv779z7b-1307395653.cos-website.ap-shanghai.myqcloud.com/ThunderSearch/ThunderSearch_txt.png)
