@@ -1,4 +1,13 @@
-# ThunderSearch 闪电搜索器
+# <h1 align="center" >ThunderSearch 闪电搜索器</h1>
+<p align="center">
+    <a href="https://github.com/xzajyjs/ThunderSearch"><img alt="ThunderSearch" src="https://visitor-badge.glitch.me/badge?page_id=xzajyjs.ThunderSearch"></a>
+    <a href="https://github.com/xzajyjs/ThunderSearch"><img alt="ThunderSearch" src="https://img.shields.io/github/followers/xzajyjs?color=red&label=Followers"></a>
+    <a href="https://github.com/xzajyjs/ThunderSearch"><img alt="ThunderSearch" src="https://img.shields.io/github/stars/xzajyjs/ThunderSearch.svg"></a>
+    <a href="https://github.com/xzajyjs/ThunderSearch/releases"><img alt="ThunderSearch" src="https://img.shields.io/github/release/xzajyjs/ThunderSearch.svg"></a>
+    <a href="https://github.com/xzajyjs/ThunderSearch/issues"><img alt="ThunderSearch" src="https://img.shields.io/github/issues/xzajyjs/ThunderSearch"></a>
+    <a href="https://github.com/xzajyjs/ThunderSearch"><img alt="ThunderSearch" src="https://img.shields.io/badge/python-3.7%20%7C%203.8%20%7C%203.9-blue"></a>
+    <a href="https://github.com/xzajyjs/ThunderSearch"><img alt="ThunderSearch" src="https://img.shields.io/badge/ThunderSearch-green"></a>
+</p>
 
 ## Intro
 利用ZoomEye的官方api，结合[开发文档](https://www.zoomeye.org/doc#user)，做了这么一个GUI界面的搜索器。目前支持查询`主机搜索`、`域名/IP`、`个人信息`
