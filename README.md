@@ -8,7 +8,7 @@
     <a href="https://github.com/xzajyjs/ThunderSearch"><img alt="ThunderSearch" src="https://img.shields.io/badge/ThunderSearch-green"></a>
 </p>
 
-## Intro
+## 🎸 Intro介绍
 利用ZoomEye的官方api，结合[开发文档](https://www.zoomeye.org/doc#user)，做了这么一个GUI界面的搜索器。目前支持查询`主机搜索`、`域名/IP`、`个人信息`
 
 - 支持本地`access_token.txt`文件的读取(免登陆)
@@ -18,7 +18,7 @@
 - 支持查询用户个人信息
 
 ---
-## How to use
+## 💡 使用方式
 ->Run  
 - 填写当前目录的`config.json`文件进行登陆(优先读取`API-KEY`)  
 - 或在GUI界面进行登陆
@@ -29,7 +29,13 @@ pip install -r requirements.txt
 ```
 > Recommend Python version: 3.8+
 ---
-## Update Log
+## 💻 TODO List
+- [ ] 代码重构
+- [ ] 优化登陆模式
+- [ ] 增加web应用搜索模块
+- [ ] 增加多种结果导出模式
+---
+## 🏝 更新日志
 
 #### v1.6
 - 增加读取json文件登陆
@@ -56,7 +62,7 @@ pip install -r requirements.txt
 - 多线程支持
 
 ---
-
+## 🌏 效果演示
 ![](ThunderSearch.png)
 
 ![](https://serverless-page-bucket-lv779z7b-1307395653.cos-website.ap-shanghai.myqcloud.com/ThunderSearch/ThunderSearch_txt.png)
