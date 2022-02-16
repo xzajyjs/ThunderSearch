@@ -30,12 +30,17 @@ pip install -r requirements.txt
 > Recommend Python version: 3.8+
 ---
 ## 💻 TODO List
-- [ ] 代码重构
-- [ ] 优化登陆模式
+- [x] 代码重构
+- [x] 优化登陆模式
 - [ ] 增加web应用搜索模块
 - [ ] 增加多种结果导出模式
 ---
 ## 🏝 更新日志
+
+#### v1.7
+- 代码重构
+- 优化登陆逻辑
+- 修复bug
 
 #### v1.6
 - 增加读取json文件登陆
@@ -63,6 +68,6 @@ pip install -r requirements.txt
 
 ---
 ## 🌏 效果演示
-![](ThunderSearch.png)
+![](pic/ThunderSearch.png)
 
 ![](https://serverless-page-bucket-lv779z7b-1307395653.cos-website.ap-shanghai.myqcloud.com/ThunderSearch/ThunderSearch_txt.png)

@@ -5,7 +5,11 @@ from tkinter import *
 from threading import Thread
 from tkinter import messagebox
 from tkinter.ttk import Treeview
-from concurrent.futures import ThreadPoolExecutor
+
+import module.host_search as hs
+import module.domain_ip as di
+import module.resource as res
+
 class Application(Frame):
     def __init__(self, master):
         super().__init__(master)
@@ -17,8 +21,8 @@ class Application(Frame):
     def createWidget(self):
         self.login_mode_label = Label(self,text='登陆方式',width=10).grid(row=0,column=0)
         self.login_mode_choice = StringVar(self)
-        self.login_mode_choice.set('账号密码')
-        self.LOGIN_MODE = OptionMenu(self,self.login_mode_choice,'账号密码','API-KEY')
+        self.login_mode_choice.set('配置文件')
+        self.LOGIN_MODE = OptionMenu(self,self.login_mode_choice,'账号密码','API-KEY','配置文件')
         self.LOGIN_MODE.grid(row=1,column=0)
         self.api_label = Label(self,text='API-KEY:').grid(row=2,column=0)
         self.API = Entry(self,width=21,borderwidth=1,show='*')
@@ -63,15 +67,14 @@ class Application(Frame):
         self.TREEVIEW.heading("IP",text="IP")
         self.TREEVIEW.heading("PORT/DOMAIN",text="PORT/DOMAIN")
         self.TREEVIEW.heading("OS",text="OS")
-        self.LOG = Text(self,relief=SOLID,borderwidth=1,height=15,width=98)
+        self.LOG = Text(self,relief=SOLID,borderwidth=1,height=15,width=98,fg='gray')
         self.LOG.grid(row=4,column=0,columnspan=10)
 
-        self.log_insert("@Author: xzajyjs\n@E-mail: xuziang16@gmail.com\n@Repository: https://github.com/xzajyjs/ThunderSearch\n")
-        self.log_insert("[-] If you log in through 'config.json', it will read the API-KEY first\n")
+        self.log_insert("@Version: 1.7\n@Author: xzajyjs\n@E-mail: xuziang16@gmail.com\n@Repo: https://github.com/xzajyjs/ThunderSearch\n")
+        self.log_insert("[-] 如果通过配置文件登陆,将优先读取API-KEY\n")
 
     def delete_tree(self,tree):
-        x = tree.get_children()
-        for item in x:
+        for item in tree.get_children():
             tree.delete(item)
     
     def delete_access_token(self):
@@ -88,35 +91,35 @@ class Application(Frame):
         try:    # access_token exists.
             with open("access_token.txt","r",encoding="utf-8") as f:
                 access_token = f.read().strip('\n')
-                self.headers = {
-                    'Authorization':'JWT ' + access_token
-                }
-            print(self.headers['Authorization'])
-            self.log_insert("Load file 'access_token.txt' successfully.\n")
+            self.headers = {
+                'Authorization':'JWT ' + access_token
+            }
+            self.log_insert("[+] Load file 'access_token.txt' successfully.\n")
             self.log_insert(f"[+] Access_Token: {self.headers['Authorization'][:7]+'*'*10+self.headers['Authorization'][-3:]}\n")
         except FileNotFoundError:   # access_token not exists.
-            try:    # config.json load successfully.
+            if self.login_mode_choice.get() == "账号密码":
+                self.log_insert("[!] Fail to find access_token.txt. Need to Login now.\n")
+                username = self.USERNAME.get().strip()
+                password = self.PASSWORD.get().strip()
+                self.user_pass_login(username=username,password=password)
+
+            elif self.login_mode_choice.get() == "API-KEY":
+                key = self.API.get().strip()
+                self.api_key_login(key)
+
+            elif self.login_mode_choice.get() == "配置文件":
                 with open("config.json","r",encoding="utf-8") as f:
                     user_data = json.load(f)
-                    if user_data['API-KEY'] != "":
-                        self.log_insert('Try to login with API-KEY in config.json.\n')
-                        self.api_key_login(api_key=user_data['API-KEY'])
-                    else:
-                        if user_data['username'] != "" and user_data['password'] != "":
-                            self.log_insert('Try to login with username/password in config.json.\n')
-                            self.user_pass_login(username=user_data['username'],password=user_data['password'])
-                        else:
-                            raise Exception('Username/Password Empty')
-            except (Exception,FileNotFoundError):
-                self.log_insert('[!] Fail to login with "config.json"\n')
-                if self.login_mode_choice.get() == "账号密码":
-                    self.log_insert("Fail to find access_token.txt. Need to Login now.\n")
-                    username = self.USERNAME.get().strip()
-                    password = self.PASSWORD.get().strip()
-                    self.user_pass_login(username=username,password=password)
-                elif self.login_mode_choice.get() == "API-KEY":
-                    key = self.API.get().strip()
-                    self.api_key_login(api_key=key)
+                if user_data['API-KEY'] != "":
+                    self.log_insert('[+] Try to login with API-KEY in config.json.\n')
+                    self.api_key_login(user_data['API-KEY'])
+                elif user_data['username'] != "" and user_data['password'] != "":
+                    self.log_insert('[+] Try to login with username/password in config.json.\n')
+                    self.user_pass_login(username=user_data['username'],password=user_data['password'])
+                else:
+                    self.log_insert('[!] config.json empty!\n')
+                    messagebox.showerror(title='Error',message='配置文件为空')
+                    return None
 
     def api_key_login(self,api_key):
         self.headers = {
@@ -131,7 +134,7 @@ class Application(Frame):
             'password':password
         }
         encoded_data = json.dumps(data)
-        resp_json = requests.post(url, encoded_data).json()
+        resp_json = requests.post(url=url, data=encoded_data).json()
         try:
             access_token = resp_json['access_token']
         except:
@@ -147,113 +150,47 @@ class Application(Frame):
         self.log_insert(f"[+] Access_Token: {self.headers['Authorization'][:7]+'*'*10+self.headers['Authorization'][-3:]}\n")
 
     def thread(self):
-        if self.QUERY.get() != "" and self.FILE.get() != "" or self.query_mode_choice.get() == "个人信息":
+        if (self.QUERY.get() != "" and self.FILE.get() != "") or self.query_mode_choice.get() == "个人信息":
             t1 = Thread(target=self.run,daemon=True)
             t1.start()
         else:
-            messagebox.showerror(title='Error',message='[!] Query or FilePath empty!')
+            messagebox.showerror(title='Error',message='[!] 查询语句或存储文件名为空!')
 
     def run(self):
         if self.query_mode_choice.get() != '个人信息':
             self.delete_tree(self.TREEVIEW)
-        self.info_list = []
         self.login()
         self.log_insert('Start searching...\n')
         query = self.QUERY.get().replace(" ",'%20')
 
         if self.query_mode_choice.get() == '主机搜索':
-            self.host_search(query=query,page=self.page_choice.get(),thread=int(self.thread_choice.get()))
+            hs.headers = self.headers
+            hs.host_search(query=query,page=self.page_choice.get(),thread=int(self.thread_choice.get()))
             j = 1
             with open(self.FILE.get(),"w",encoding="utf-8") as f:
                 f.write("ip:port\tcountry\tos\thostname\n")
-                for each_dic in self.info_list:
+                for each_dic in hs.info_list:
                     self.TREEVIEW.insert("",END,values=(j,each_dic['ip'],each_dic['port'],each_dic['os']))
                     f.write(f"{each_dic['ip']}:{each_dic['port']},{each_dic['country']},{each_dic['os']},{each_dic['hostname']}\n")
                     j += 1
                     
         if self.query_mode_choice.get() == '域名/IP':
-            self.domain_ip(query=query,page=self.page_choice.get(),thread=int(self.thread_choice.get()))
+            di.headers = self.headers
+            di.domain_ip(query=query,page=self.page_choice.get(),thread=int(self.thread_choice.get()))
             j = 1
             with open(self.FILE.get(),"w",encoding="utf-8") as f:
                 f.write("ip\tdomain\n")
-                for each_dic in self.info_list:
+                for each_dic in di.info_list:
                     self.TREEVIEW.insert("",END,values=(j,each_dic['ip'],each_dic['name'],None))
                     f.write(f"{each_dic['ip']} {each_dic['name']}\n")
                     j += 1
 
+        res.headers = self.headers
         if self.query_mode_choice.get() == '个人信息':
-            self.resource(mode="complete")
+            self.log_insert(res.resource(mode="complete"))
         else:
             self.log_insert(f'Complete information has been stored into {self.FILE.get()}.\n')
-            self.resource(mode="easy")            
-
-    def host_search(self, query, page, thread):
-        with ThreadPoolExecutor(thread) as t:
-            for i in range(1,int(page)+1):
-                t.submit(self.host_search_threadpool, query=query, page=i)
-        self.log_insert("End of search.\n")
-
-    def host_search_threadpool(self, query, page):
-        url = f'https://api.zoomeye.org/host/search?query={query}&page={page}&sub_type=v4&facets=app,os'
-        print(url)
-        try:
-            matches = requests.get(url, headers=self.headers).json()
-            for each in matches['matches']:
-                each_dic = {}
-                each_dic['ip'] = each['ip']
-                each_dic['port'] = each['portinfo']['port']
-                each_dic['country'] = each['geoinfo']['country']['names']['en']
-                each_dic['os'] = each['portinfo']['os']
-                each_dic['hostname'] = each['portinfo']['hostname']
-                
-                self.info_list.append(each_dic)
-        except Exception as e:
-            if str(e.message) == 'matches':
-                print ()
-                self.log_insert('[-] info : account was break, excceeding the max limitations\n')
-            else:
-                print  ()
-                self.log_insert(f'[-] info : {str(e.message)}\n')
-
-    def domain_ip(self, query, page, thread):
-        with ThreadPoolExecutor(thread) as t:
-            for i in range(1,int(page)+1):
-                t.submit(self.domain_ip_threadpool, query=query, page=i)
-        self.log_insert("End of search.\n")
-
-    def domain_ip_threadpool(self, query, page):
-        resp = requests.get(f'https://api.zoomeye.org/domain/search?q={query}&type=0&page={page}', headers=self.headers)
-        try:
-            for each in resp.json()['list']:
-                each_dic = {}
-                try:
-                    each_dic['ip'] = each['ip']
-                except:
-                    each_dic['ip'] = None
-                each_dic['name'] = each['name']
-                self.info_list.append(each_dic)
-        except Exception as e:
-            if str(e.message) == 'resp':
-                print ()
-                self.log_insert('[-] info : account was break, excceeding the max limitations\n')
-            else:
-                print  ()
-                self.log_insert(f'[-] info : {str(e.message)}\n')
-        
-    def resource(self,mode):     # user_info
-        resp = requests.get('https://api.zoomeye.org/resources-info', headers=self.headers)
-        last = resp.json()['resources']['search']
-        if mode == "easy":
-            self.log_insert(f"[!] Your account's Remaining query quota: {last} (this month).\n")
-        elif mode == "complete":
-            inteval = resp.json()['resources']['interval']
-            uname = resp.json()['user_info']['name']
-            role = resp.json()['user_info']['role']
-            expired_at = resp.json()['user_info']['expired_at']
-            remain_free_quota = resp.json()['quota_info']['remain_free_quota']
-            remain_pay_quota = resp.json()['quota_info']['remain_pay_quota']
-            remain_total_quota = resp.json()['quota_info']['remain_total_quota']
-            self.log_insert(f'[+] Name: {uname}\n[+] Role: {role}\n[+] Intevel: {inteval}\n[+] Expired_at: {expired_at}\n[+] Remain_free_quota: {remain_free_quota}\n[+] Remain_pay_quota: {remain_pay_quota}\n[+] Remain_total_quota: {remain_total_quota}\n')
+            self.log_insert(res.resource(mode="easy"))
 
 
 if __name__=='__main__':
@@ -261,6 +198,6 @@ if __name__=='__main__':
     root.geometry('718x497+350+100')
     root.maxsize(width=718,height=497)
     root.minsize(width=718,height=497)
-    root.title('ThunderSearch v1.6    --xzajyjs')
+    root.title('ThunderSearch v1.7  --xzajyjs')
     Application(master=root)
     root.mainloop()
