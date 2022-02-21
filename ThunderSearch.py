@@ -1,5 +1,6 @@
 import json
 import requests
+import pymysql
 from os import system
 from tkinter import *
 from threading import Thread
@@ -9,6 +10,7 @@ from tkinter.ttk import Treeview
 import module.host_search as hs
 import module.domain_ip as di
 import module.resource as res
+import module.web_search as ws
 
 class Application(Frame):
     def __init__(self, master):
@@ -47,15 +49,23 @@ class Application(Frame):
         self.mode_label = Label(self,text='模式:').grid(row=0,column=7)
         self.query_mode_choice = StringVar(self)
         self.query_mode_choice.set('主机搜索')
-        self.MODE = OptionMenu(self,self.query_mode_choice,'主机搜索','域名/IP','个人信息')
+        self.MODE = OptionMenu(self,self.query_mode_choice,'主机搜索','域名/IP','web应用','个人信息')
         self.MODE.grid(row=0,column=8)
         self.START = Button(self,text='查询',command=self.thread)
         self.START.grid(row=0,column=9)
-        self.QUERY = Entry(self, width=35,borderwidth=1)
+        self.QUERY = Entry(self, width=36,borderwidth=1)
         self.QUERY.grid(row=1,column=4,columnspan=8)
-        self.file_label = Label(self,text='存储文件名:').grid(row=2,column=3)
-        self.FILE = Entry(self,width=35,borderwidth=1)
-        self.FILE.grid(row=2,column=4,columnspan=8)
+        
+        self.save_mode_label = Label(self,text='存储模式:').grid(row=2,column=3)
+        self.save_mode_choice = StringVar(self)
+        self.save_mode_choice.set('数据库')
+        self.SAVE_MODE = OptionMenu(self,self.save_mode_choice,'存文件','数据库')
+        self.SAVE_MODE.grid(row=2,column=4)
+
+        self.file_label = Label(self,text='文件名:').grid(row=2,column=5)
+        self.FILE = Entry(self,width=21,borderwidth=1)
+        self.FILE.grid(row=2,column=6,columnspan=10)
+        
         self.TREEVIEW = Treeview(self,show='headings')
         self.TREEVIEW.grid(row=3,column=0,columnspan=10)
         self.TREEVIEW['columns'] = ("ID","IP","PORT/DOMAIN","OS")
@@ -70,8 +80,7 @@ class Application(Frame):
         self.LOG = Text(self,relief=SOLID,borderwidth=1,height=15,width=98,fg='gray')
         self.LOG.grid(row=4,column=0,columnspan=10)
 
-        self.log_insert("@Version: 1.7\n@Author: xzajyjs\n@E-mail: xuziang16@gmail.com\n@Repo: https://github.com/xzajyjs/ThunderSearch\n")
-        self.log_insert("[-] 如果通过配置文件登陆,将优先读取API-KEY\n")
+        self.log_insert("@Version: 1.7.5\n@Author: xzajyjs\n@E-mail: xuziang16@gmail.com\n@Repo: https://github.com/xzajyjs/ThunderSearch\n")
 
     def delete_tree(self,tree):
         for item in tree.get_children():
@@ -150,11 +159,30 @@ class Application(Frame):
         self.log_insert(f"[+] Access_Token: {self.headers['Authorization'][:7]+'*'*10+self.headers['Authorization'][-3:]}\n")
 
     def thread(self):
-        if (self.QUERY.get() != "" and self.FILE.get() != "") or self.query_mode_choice.get() == "个人信息":
-            t1 = Thread(target=self.run,daemon=True)
-            t1.start()
+        if self.query_mode_choice.get() == "个人信息" or self.QUERY.get() != "":
+            if self.save_mode_choice.get() == "数据库":
+                with open("config.json","r",encoding="utf-8") as f:
+                    user_data = json.load(f)
+                self.db_name = user_data['db_name']
+                self.db_host = user_data['db_host']
+                # self.db_port = user_data['db_port']
+                self.db_username = user_data['db_username']
+                self.db_password = user_data['db_password']
+                try:
+                    self.conn = pymysql.connect(database=self.db_name,host=self.db_host,user=self.db_username,password=self.db_password)
+                except:
+                    messagebox.showerror(title='Error',message='[!] 数据库连接失败!')
+                    return 
+                else:
+                    self.log_insert('[+] 数据库连接成功\n')
+                    self.cursor = self.conn.cursor()
+            elif self.save_mode_choice.get() == "存文件" and self.FILE.get() == "":
+                messagebox.showerror(title='Error',message='[!] 文件名为空!')
+                return
+            t = Thread(target=self.run,daemon=True)
+            t.start()
         else:
-            messagebox.showerror(title='Error',message='[!] 查询语句或存储文件名为空!')
+            messagebox.showerror(title='Error',message='[!] 查询语句为空!')
 
     def run(self):
         if self.query_mode_choice.get() != '个人信息':
@@ -166,30 +194,75 @@ class Application(Frame):
         if self.query_mode_choice.get() == '主机搜索':
             hs.headers = self.headers
             hs.host_search(query=query,page=self.page_choice.get(),thread=int(self.thread_choice.get()))
-            j = 1
-            with open(self.FILE.get(),"w",encoding="utf-8") as f:
-                f.write("ip:port\tcountry\tos\thostname\n")
+
+            if self.save_mode_choice.get() == "数据库":
+                self.cursor.execute('''CREATE TABLE if not exists host_search(
+                ip text,port text,os text,app text,version text,title text,city text,country text,continents text);''')
+                self.conn.commit()
+                j = 1
                 for each_dic in hs.info_list:
                     self.TREEVIEW.insert("",END,values=(j,each_dic['ip'],each_dic['port'],each_dic['os']))
-                    f.write(f"{each_dic['ip']}:{each_dic['port']},{each_dic['country']},{each_dic['os']},{each_dic['hostname']}\n")
-                    j += 1
+                    self.cursor.execute(f'''INSERT INTO host_search VALUES("{each_dic["ip"]}","{each_dic["port"]}","{each_dic["os"]}","{each_dic["app"]}","{each_dic["version"]}","{each_dic["title"]}","{each_dic["city"]}","{each_dic["country"]}","{each_dic["continents"]}")''')
+                    self.conn.commit()
+                    j+=1
+            elif self.save_mode_choice.get() == "存文件":
+                j = 1
+                with open(self.FILE.get(),"w",encoding="utf-8") as f:
+                    f.write("ip ,port ,os ,app ,version ,title ,city ,country ,continents\n")
+                    for each_dic in hs.info_list:
+                        self.TREEVIEW.insert("",END,values=(j,each_dic['ip'],each_dic['port'],each_dic['os']))
+                        f.write(f'''{each_dic["ip"]}","{each_dic["port"]}","{each_dic["os"]}","{each_dic["app"]}","{each_dic["version"]}","{each_dic["title"]}","{each_dic["city"]}","{each_dic["country"]}","{each_dic["continents"]}\n''')
+                        j+=1
                     
         if self.query_mode_choice.get() == '域名/IP':
             di.headers = self.headers
             di.domain_ip(query=query,page=self.page_choice.get(),thread=int(self.thread_choice.get()))
-            j = 1
-            with open(self.FILE.get(),"w",encoding="utf-8") as f:
-                f.write("ip\tdomain\n")
+            if self.save_mode_choice.get() == "数据库":
+                self.cursor.execute('''CREATE TABLE if not exists domain_ip(
+                ip text,name text);''')
+                self.conn.commit()
+                j = 1
                 for each_dic in di.info_list:
                     self.TREEVIEW.insert("",END,values=(j,each_dic['ip'],each_dic['name'],None))
-                    f.write(f"{each_dic['ip']} {each_dic['name']}\n")
-                    j += 1
+                    self.cursor.execute(f'''INSERT INTO domain_ip VALUES("{each_dic['ip']}","{each_dic['name']}")''')
+                    self.conn.commit()
+                    j+=1
+            elif self.save_mode_choice.get() == "存文件":
+                j = 1
+                with open(self.FILE.get(),"w",encoding="utf-8") as f:
+                    f.write("ip ,name\n")
+                    for each_dic in di.info_list:
+                        self.TREEVIEW.insert("",END,values=(j,each_dic['ip'],each_dic['name'],None))
+                        f.write(f'''{each_dic["ip"]}","{each_dic["name"]}"\n''')
+                        j+=1
+
+        if self.query_mode_choice.get() == 'web应用':
+            ws.headers = self.headers
+            ws.web_search(query=query,page=self.page_choice.get(),thread=int(self.thread_choice.get()))
+            if self.save_mode_choice.get() == "数据库":
+                self.cursor.execute('''CREATE TABLE if not exists web_search(
+                ip text,site text,city text,country text,continent text,isp text);''')
+                self.conn.commit()
+                j = 1
+                for each_dic in ws.info_list:
+                    self.TREEVIEW.insert("",END,values=(j,each_dic['ip'],each_dic['site']))
+                    self.cursor.execute(f'''INSERT INTO web_search VALUES("{each_dic["ip"]}","{each_dic["site"]}","{each_dic["city"]}","{each_dic["country"]}","{each_dic["continent"]}","{each_dic['isp']}");''')
+                    self.conn.commit()
+                    j+=1
+            elif self.save_mode_choice.get() == "存文件":
+                j = 1
+                with open(self.FILE.get(),"w",encoding="utf-8") as f:
+                    f.write("ip ,site ,city ,country ,continents, isp\n")
+                    for each_dic in ws.info_list:
+                        self.TREEVIEW.insert("",END,values=(j,each_dic['ip'],each_dic['site']))
+                        f.write(f'''{each_dic["ip"]},{each_dic["site"]},{each_dic["city"]},{each_dic["country"]},{each_dic["continent"]},{each_dic['isp']}\n''')
+                        j+=1
 
         res.headers = self.headers
         if self.query_mode_choice.get() == '个人信息':
             self.log_insert(res.resource(mode="complete"))
         else:
-            self.log_insert(f'Complete information has been stored into {self.FILE.get()}.\n')
+            self.log_insert(f'Complete information has been stored by mode "{self.save_mode_choice.get()}".\n')
             self.log_insert(res.resource(mode="easy"))
 
 
@@ -198,6 +271,6 @@ if __name__=='__main__':
     root.geometry('718x497+350+100')
     root.maxsize(width=718,height=497)
     root.minsize(width=718,height=497)
-    root.title('ThunderSearch v1.7  --xzajyjs')
+    root.title('ThunderSearch v1.7.5  --xzajyjs')
     Application(master=root)
     root.mainloop()

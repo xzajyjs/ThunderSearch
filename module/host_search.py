@@ -1,4 +1,5 @@
 import requests
+import pymysql
 from concurrent.futures import ThreadPoolExecutor
 
 info_list = []
@@ -21,9 +22,15 @@ def host_search_threadpool(query, page):
             each_dic = {}
             each_dic['ip'] = each['ip']
             each_dic['port'] = each['portinfo']['port']
-            each_dic['country'] = each['geoinfo']['country']['names']['en']
             each_dic['os'] = each['portinfo']['os']
-            each_dic['hostname'] = each['portinfo']['hostname']
+            each_dic['app'] = each['portinfo']['app']
+            each_dic['version'] = each['portinfo']['version']
+            each_dic['title'] = each['portinfo']['title']
+            if each_dic['title'] != None:
+                each_dic['title'] = each_dic['title'][0]
+            each_dic['city'] = each['geoinfo']['city']['names']['en']   #城市
+            each_dic['country'] = each['geoinfo']['country']['names']['en']     #国家
+            each_dic['continents'] = each['geoinfo']['continent']['names']['en']    #大洲
             
             info_list.append(each_dic)
     except Exception as e:
