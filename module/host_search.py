@@ -14,10 +14,10 @@ def host_search(query, page, thread):
     return ("End of search.\n")
 
 def host_search_threadpool(query, page):
-    url = f'https://api.zoomeye.org/host/search?query={query}&page={page}&sub_type=v4&facets=app,os'
+    url = f'https://api.zoomeye.org/host/search?query={query}&page={page}&facets=app,os'
     print(url)
     try:
-        matches = requests.get(url, headers=headers).json()
+        matches = requests.get(url, headers=headers, timeout=5).json()
         for each in matches['matches']:
             each_dic = {}
             each_dic['ip'] = each['ip']
