@@ -12,6 +12,8 @@ import module.domain_ip as di
 import module.resource as res
 import module.web_search as ws
 
+VERSION = "v1.7.6"
+
 class Application(Frame):
     def __init__(self, master):
         super().__init__(master)
@@ -80,7 +82,7 @@ class Application(Frame):
         self.LOG = Text(self,relief=SOLID,borderwidth=1,height=15,width=98,fg='gray')
         self.LOG.grid(row=4,column=0,columnspan=10)
 
-        self.log_insert("@Version: 1.7.5\n@Author: xzajyjs\n@E-mail: xuziang16@gmail.com\n@Repo: https://github.com/xzajyjs/ThunderSearch\n")
+        self.log_insert(f"@Version: {VERSION}\n@Author: xzajyjs\n@E-mail: xuziang16@gmail.com\n@Repo: https://github.com/xzajyjs/ThunderSearch\n")
 
     def delete_tree(self,tree):
         for item in tree.get_children():
@@ -280,6 +282,6 @@ if __name__=='__main__':
     root.geometry('718x497+350+100')
     root.maxsize(width=718,height=497)
     root.minsize(width=718,height=497)
-    root.title('ThunderSearch v1.7.6  --xzajyjs')
+    root.title(f'ThunderSearch {VERSION}  --xzajyjs')
     Application(master=root)
     root.mainloop()
