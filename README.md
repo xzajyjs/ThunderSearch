@@ -9,7 +9,7 @@
 </p>
 
 ## 🎸 Intro介绍
-调用ZoomEye的官方api，结合[开发文档](https://www.zoomeye.org/doc#user)，开发的GUI界面的信息搜集工具。支持查询`主机搜索`、`域名/IP`、`web应用搜索`、`个人信息`
+调用ZoomEye的官方api(未来会支持更多资产搜索引擎)，开发的GUI界面的信息搜集工具。支持查询`主机搜索`、`域名/IP`、`web应用搜索`、`个人信息`
 
 - 支持读取`config.json`文件进行登陆
 - 支持账号密码和API-KEY登陆
@@ -76,6 +76,7 @@ pip install -r requirements.txt
 - [x] 优化登陆模式
 - [x] 增加web应用搜索模块
 - [x] 增加多种结果导出模式
+- [ ] 增加不同搜索引擎支持如quake、fofa、hunter等
 ---
 ## 🏝 更新日志
 #### v1.7.6
