@@ -17,15 +17,16 @@ def web_search_threadpool(query, page):
     print(url)
     try:
         matches = requests.get(url, headers=headers).json()
+        # print(matches)
         for each in matches['matches']:
             each_dic = {}
             each_dic['ip'] = ";".join(each['ip'])
             each_dic['site'] = each['site']
+            each_dic['title'] = each['title']
             each_dic['city'] = each['geoinfo']['city']['names']['en']
             each_dic['country'] = each['geoinfo']['country']['names']['en']
             each_dic['continent'] = each['geoinfo']['continent']['names']['en']
             each_dic['isp'] = each['geoinfo']['isp']
-
             info_list.append(each_dic)
     except Exception as e:
         if str(e.message) == 'matches':

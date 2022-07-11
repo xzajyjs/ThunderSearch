@@ -1,5 +1,4 @@
 import requests
-import pymysql
 from concurrent.futures import ThreadPoolExecutor
 
 info_list = []
@@ -17,7 +16,8 @@ def host_search_threadpool(query, page):
     url = f'https://api.zoomeye.org/host/search?query={query}&page={page}&facets=app,os'
     print(url)
     try:
-        matches = requests.get(url, headers=headers, timeout=5).json()
+        resp = requests.get(url, headers=headers, timeout=5)
+        matches = resp.json()
         for each in matches['matches']:
             each_dic = {}
             each_dic['ip'] = each['ip']
