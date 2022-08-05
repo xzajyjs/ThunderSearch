@@ -3,6 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 info_list = []
 headers = {}
+session = requests.Session()
 
 def host_search(query, page, thread):
     global info_list
@@ -14,9 +15,9 @@ def host_search(query, page, thread):
 
 def host_search_threadpool(query, page):
     url = f'https://api.zoomeye.org/host/search?query={query}&page={page}&facets=app,os'
-    print(url)
+    # print(url)
     try:
-        resp = requests.get(url, headers=headers, timeout=5)
+        resp = session.get(url, headers=headers, timeout=5)
         matches = resp.json()
         for each in matches['matches']:
             each_dic = {}
@@ -31,7 +32,7 @@ def host_search_threadpool(query, page):
             each_dic['city'] = each['geoinfo']['city']['names']['en']   #城市
             each_dic['country'] = each['geoinfo']['country']['names']['en']     #国家
             each_dic['continents'] = each['geoinfo']['continent']['names']['en']    #大洲
-            
+
             info_list.append(each_dic)
     except Exception as e:
         if str(e.message) == 'matches':

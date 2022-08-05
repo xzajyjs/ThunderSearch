@@ -19,4 +19,4 @@ def resource(mode):     # user_info
             remain_free_quota = resp.json()['quota_info']['remain_free_quota']
             remain_pay_quota = resp.json()['quota_info']['remain_pay_quota']
             remain_total_quota = resp.json()['quota_info']['remain_total_quota']
-            return (f'[+] Name: {uname}\n[+] Role: {role}\n[+] Intevel: {inteval}\n[+] Expired_at: {expired_at}\n[+] Remain_free_quota: {remain_free_quota}\n[+] Remain_pay_quota: {remain_pay_quota}\n[+] Remain_total_quota: {remain_total_quota}\n')
+            return (f'========= Zoomeye ========\n[+] Name: {uname}\n[+] Role: {role}\n[+] Intevel: {inteval}\n[+] Expired_at: {expired_at}\n[+] Remain_free_quota: {remain_free_quota}\n[+] Remain_pay_quota: {remain_pay_quota}\n[+] Remain_total_quota: {remain_total_quota}\n========================\n')

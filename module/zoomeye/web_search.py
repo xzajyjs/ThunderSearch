@@ -3,6 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 info_list = []
 headers = {}
+session = requests.Session()
 
 def web_search(query, page, thread):
     global info_list
@@ -14,9 +15,9 @@ def web_search(query, page, thread):
 
 def web_search_threadpool(query, page):
     url = f'https://api.zoomeye.org/web/search?query={query}&facets=app,os&page={page}'
-    print(url)
+    # print(url)
     try:
-        matches = requests.get(url, headers=headers).json()
+        matches = session.get(url, headers=headers).json()
         # print(matches)
         for each in matches['matches']:
             each_dic = {}

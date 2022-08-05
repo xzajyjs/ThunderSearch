@@ -21,7 +21,6 @@ def fofa_search(email,key,query,size):
         resp = session.get('https://fofa.info/api/v1/search/all', data=params)
         data = resp.json()['results']
         total_num = len(data)
-        session.close()
         for each in data:
             each_dic = {}
             each_dic['ip'] = each[0]
