@@ -23,7 +23,7 @@ import module.quake.resource as quake_resource
 import module.quake.host_search as quake_hostsearch
 import module.quake.service_search as quake_servicesearch
 
-VERSION = "v2.3"
+VERSION = "v2.3.1"
 
 class Application(tk.Frame):
     def __init__(self, master):
