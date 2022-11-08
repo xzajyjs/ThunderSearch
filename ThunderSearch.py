@@ -23,7 +23,7 @@ import module.quake.resource as quake_resource
 import module.quake.host_search as quake_hostsearch
 import module.quake.service_search as quake_servicesearch
 
-VERSION = "v2.3.1"
+VERSION = "v2.3.2"
 
 class Application(tk.Frame):
     def __init__(self, master):
@@ -31,18 +31,20 @@ class Application(tk.Frame):
         self.master=master
         self.delete_access_token()
         self.createWidget()
+        self.language = self.dic['language']
+        self.setLanguage(language=self.language)
         self.pack()
         
 
     def createWidget(self):
-        notebook = Notebook(self)
+        self.notebook = Notebook(self)
         self.search_frame = tk.Frame()
         config_frame = tk.Frame()
         help_frame = tk.Frame()
-        notebook.add(self.search_frame, text='查询')
-        notebook.add(config_frame, text='配置')
-        notebook.add(help_frame, text='帮助')
-        notebook.grid(row=0,column=0,columnspan=20)
+        self.notebook.add(self.search_frame, text='查询')
+        self.notebook.add(config_frame, text='配置')
+        self.notebook.add(help_frame, text='帮助')
+        self.notebook.grid(row=0,column=0,columnspan=20)
 
         # help_frame
         help_text = tk.Text(help_frame,relief=tk.SOLID,borderwidth=1,height=35,width=100,fg='gray')
@@ -124,8 +126,10 @@ https://quake.360.cn/quake/#/help?id=5eb238f110d2e850d5c6aec8&title=%E6%A3%80%E7
 
         # zoomeye
         tk.Label(config_frame,text='Zoomeye',width=10).grid(row=0,column=0,columnspan=2)
-        tk.Label(config_frame, text='账号:').grid(row=1,column=0)
-        tk.Label(config_frame, text='密码:').grid(row=2,column=0)
+        self.label_zoomeyeUser = tk.Label(config_frame, text='账号:')
+        self.label_zoomeyeUser.grid(row=1,column=0)
+        self.label_zoomeyePass = tk.Label(config_frame, text='密码:')
+        self.label_zoomeyePass.grid(row=2,column=0)
         tk.Label(config_frame,text='API-KEY:').grid(row=3,column=0)
         self.ZOOMEYE_USERNAME = tk.Entry(config_frame,width=24,borderwidth=1)
         self.ZOOMEYE_USERNAME.grid(row=1,column=1)
@@ -136,7 +140,8 @@ https://quake.360.cn/quake/#/help?id=5eb238f110d2e850d5c6aec8&title=%E6%A3%80%E7
 
         # fofa
         tk.Label(config_frame,text='Fofa',width=10).grid(row=5,column=0,columnspan=2)
-        tk.Label(config_frame, text='邮箱:').grid(row=6,column=0)
+        self.label_fofaEmail = tk.Label(config_frame, text='邮箱:')
+        self.label_fofaEmail.grid(row=6,column=0)
         tk.Label(config_frame,text='API-KEY:').grid(row=7,column=0)
         self.FOFA_USERNAME = tk.Entry(config_frame,width=24,borderwidth=1)
         self.FOFA_USERNAME.grid(row=6,column=1)
@@ -153,14 +158,22 @@ https://quake.360.cn/quake/#/help?id=5eb238f110d2e850d5c6aec8&title=%E6%A3%80%E7
         self.QUAKE_API.grid(row=10,column=1)
 
         # 右侧配置
-        tk.Label(config_frame, text='其他配置').grid(row=0,column=2,columnspan=2)
-        tk.Label(config_frame,text='文件路径').grid(row=1,column=2)
-        tk.Label(config_frame, text='数据库配置(MySQL)').grid(row=2,column=2,columnspan=2)
-        tk.Label(config_frame,text='主机').grid(row=3,column=2)
-        tk.Label(config_frame,text='端口').grid(row=4,column=2)
-        tk.Label(config_frame,text='数据库名').grid(row=5,column=2)
-        tk.Label(config_frame,text='用户名').grid(row=6,column=2)
-        tk.Label(config_frame,text='密码').grid(row=7,column=2)
+        self.label_otherConfig = tk.Label(config_frame, text='其他配置')
+        self.label_otherConfig.grid(row=0,column=2,columnspan=2)
+        self.label_filePath = tk.Label(config_frame,text='文件路径')
+        self.label_filePath.grid(row=1,column=2)
+        self.label_dbConfig = tk.Label(config_frame, text='数据库配置(MySQL)')
+        self.label_dbConfig.grid(row=2,column=2,columnspan=2)
+        self.label_dbHost = tk.Label(config_frame,text='主机')
+        self.label_dbHost.grid(row=3,column=2)
+        self.label_dbPort = tk.Label(config_frame,text='端口')
+        self.label_dbPort.grid(row=4,column=2)
+        self.label_dbName = tk.Label(config_frame,text='数据库名')
+        self.label_dbName.grid(row=5,column=2)
+        self.label_dbUser = tk.Label(config_frame,text='用户名')
+        self.label_dbUser.grid(row=6,column=2)
+        self.label_dbPass = tk.Label(config_frame,text='密码')
+        self.label_dbPass.grid(row=7,column=2)
         self.FILE = tk.Entry(config_frame, width=30,borderwidth=1)
         self.FILE.grid(row=1,column=3)
         self.DATABASE_HOST = tk.Entry(config_frame, width=30,borderwidth=1)
@@ -179,26 +192,29 @@ https://quake.360.cn/quake/#/help?id=5eb238f110d2e850d5c6aec8&title=%E6%A3%80%E7
         self.SAVE.grid(row=3,column=4)
         self.LOAD = tk.Button(config_frame, text='读取配置', command=self.load_config)
         self.LOAD.grid(row=4,column=4)
-        self.LOAD = tk.Button(config_frame, text='清空配置', command=self.clear_config)
-        self.LOAD.grid(row=5,column=4)
-        self.LOAD = tk.Button(config_frame, text='数据库测试', command=self.db_test)
-        self.LOAD.grid(row=6,column=4)
-        self.SAVE = tk.Button(config_frame, text='清除token', command=self.delete_access_token)
-        self.SAVE.grid(row=7,column=4)
+        self.CLEAR = tk.Button(config_frame, text='清空配置', command=self.clear_config)
+        self.CLEAR.grid(row=5,column=4)
+        self.TESTDB = tk.Button(config_frame, text='数据库测试', command=self.db_test)
+        self.TESTDB.grid(row=6,column=4)
+        self.CLEARTOKEN = tk.Button(config_frame, text='清除token', command=self.delete_access_token)
+        self.CLEARTOKEN.grid(row=7,column=4)
 
 
         # self.search_frame
-        tk.Label(self.search_frame, text='线程数:',width=6).grid(row=0,column=0)
+        self.label_thread = tk.Label(self.search_frame, text='线程数:',width=6)
+        self.label_thread.grid(row=0,column=0)
         self.thread_choice = tk.StringVar(self)
         self.thread_choice.set('5')
         self.THREAD = tk.OptionMenu(self.search_frame,self.thread_choice,'1','5','10','20','30')
         self.THREAD.grid(row=0,column=1)
-        tk.Label(self.search_frame,text='查询页数:').grid(row=0,column=2)
+        self.label_page = tk.Label(self.search_frame,text='查询页数:')
+        self.label_page.grid(row=0,column=2)
         self.page_choice = tk.StringVar(self)
         self.page_choice.set('1')
         self.PAGE = tk.OptionMenu(self.search_frame,self.page_choice,'1','2','3','4','5','10','15','20','30','50','80','100','200','300','500','1000')
         self.PAGE.grid(row=0,column=3)
-        tk.Label(self.search_frame,text='模式:').grid(row=0,column=4)
+        self.label_mode = tk.Label(self.search_frame,text='模式:')
+        self.label_mode.grid(row=0,column=4)
 
         self.mode_dict = {
             'Zoomeye':['主机搜索','域名/IP','web应用','个人信息'],
@@ -214,17 +230,20 @@ https://quake.360.cn/quake/#/help?id=5eb238f110d2e850d5c6aec8&title=%E6%A3%80%E7
         self.search_engine_choice.trace('w', self.update_mode_menu)
         self.search_engine_choice.set('Zoomeye')
 
-        tk.Label(self.search_frame,text='存储模式:').grid(row=0,column=6)
+        self.label_saveMode = tk.Label(self.search_frame,text='存储模式:')
+        self.label_saveMode.grid(row=0,column=6)
         self.save_mode_choice = tk.StringVar(self)
         self.save_mode_choice.set('不保存')
         self.SAVE_MODE = tk.OptionMenu(self.search_frame,self.save_mode_choice,'不保存','存文件','数据库')
         self.SAVE_MODE.grid(row=0,column=7)
 
-        tk.Label(self.search_frame, text='搜索引擎:').grid(row=0, column=8)
+        self.label_searchEngine = tk.Label(self.search_frame, text='搜索引擎:')
+        self.label_searchEngine.grid(row=0, column=8)
         self.SEARCH_ENGINE = tk.OptionMenu(self.search_frame, self.search_engine_choice, *self.mode_dict.keys())
         self.SEARCH_ENGINE.grid(row=0, column=9)
 
-        tk.Label(self.search_frame, text='查询语句:').grid(row=1, column=0)
+        self.label_searchQuery = tk.Label(self.search_frame, text='查询语句:')
+        self.label_searchQuery.grid(row=1, column=0)
         self.QUERY = tk.Entry(self.search_frame, width=60, borderwidth=1)
         self.QUERY.grid(row=1, column=1, columnspan=8)
         self.START = tk.Button(self.search_frame, text='查询', command=self.thread)
@@ -249,11 +268,77 @@ https://quake.360.cn/quake/#/help?id=5eb238f110d2e850d5c6aec8&title=%E6%A3%80%E7
         # 信息处理
         self.log_insert(f"@Version: {VERSION}\n@Author: xzajyjs\n@E-mail: xuziang16@gmail.com\n@Repo: https://github.com/xzajyjs/ThunderSearch\n")
         if not os.path.exists('config.json'):
+            self.language = "ch"
             self.save_config()
         try:
             self.load_config()
         except Exception as e:
             messagebox.showerror(title='Error',message=f'配置文件读取错误, {e}')
+
+
+    def setLanguage(self, language='ch'):
+        if self.language == "en":
+            # tab
+            self.notebook.tab(0,text='Search')
+            self.notebook.tab(1,text='Config')
+            self.notebook.tab(2,text='Help')
+
+            # search_tab
+            self.label_thread['text'] = "Thread"
+            self.label_mode['text'] = "Mode"
+            self.label_page['text'] = "Page"
+            self.label_saveMode['text'] = "SaveMode"
+            self.label_searchEngine['text'] = "SearchEngine"
+            self.label_searchQuery['text'] = "Query"
+            self.START.configure(text='Search')
+
+            # config_tab
+            self.label_zoomeyeUser['text'] = "Account"
+            self.label_zoomeyePass['text'] = "Password"
+            self.label_fofaEmail['text'] = "E-mail"
+            self.label_otherConfig['text'] = "Other"
+            self.label_filePath['text'] = "FilePath"
+            self.label_dbConfig['text'] = "DB Config(MySQL)"
+            self.label_dbHost['text'] = "Host"
+            self.label_dbPort['text'] = "Port"
+            self.label_dbName['text'] = "dbName"
+            self.label_dbUser['text'] = "User"
+            self.label_dbPass['text'] = "Pass"
+            self.SAVE.configure(text='SaveConfig')
+            self.LOAD.configure(text='LoadConfig')
+            self.CLEAR.configure(text='ClearConfig')
+            self.TESTDB.configure(text='TestDB')
+            self.CLEARTOKEN.configure(text='ClearToken')
+
+        elif self.language == "ch":
+            self.notebook.tab(0,text='查询')
+            self.notebook.tab(1,text='配置')
+            self.notebook.tab(2,text='帮助')
+
+            self.label_thread['text'] = "线程数"
+            self.label_mode['text'] = "模式"
+            self.label_page['text'] = "查询页数"
+            self.label_saveMode['text'] = "存储模式"
+            self.label_searchEngine['text'] = "搜索引擎"
+            self.label_searchQuery['text'] = "查询语句"
+            self.START.configure(text='查询')
+
+            self.label_zoomeyeUser['text'] = "账号"
+            self.label_zoomeyePass['text'] = "密码"
+            self.label_fofaEmail['text'] = "邮箱"
+            self.label_otherConfig['text'] = "其他配置"
+            self.label_filePath['text'] = "文件路径"
+            self.label_dbConfig['text'] = "数据库配置(MySQL)"
+            self.label_dbHost['text'] = "主机"
+            self.label_dbPort['text'] = "端口"
+            self.label_dbName['text'] = "数据库名"
+            self.label_dbUser['text'] = "用户名"
+            self.label_dbPass['text'] = "密码"
+            self.SAVE.configure(text='保存配置')
+            self.LOAD.configure(text='读取配置')
+            self.CLEAR.configure(text='清空配置')
+            self.TESTDB.configure(text='测试数据库')
+            self.CLEARTOKEN.configure(text='清除token')
 
 
     def update_mode_menu(self,*args):
@@ -297,6 +382,7 @@ https://quake.360.cn/quake/#/help?id=5eb238f110d2e850d5c6aec8&title=%E6%A3%80%E7
 
     def _save_config(self):     # 保存数据
         self.dic = {
+            'language':self.language,
             'zoomeye_username':self.ZOOMEYE_USERNAME.get(),
             'zoomeye_password':self.ZOOMEYE_PASSWORD.get(),
             'zoomeye_api':self.ZOOMEYE_API.get(),
@@ -641,9 +727,9 @@ https://quake.360.cn/quake/#/help?id=5eb238f110d2e850d5c6aec8&title=%E6%A3%80%E7
 
 if __name__=='__main__':
     root = tk.Tk()
-    root.geometry('760x516+320+100')
-    root.minsize(width=760, height=516)
-    root.maxsize(width=760, height=516)
+    root.geometry('785x526+320+100')
+    root.minsize(width=785, height=526)
+    root.maxsize(width=785, height=526)
     root.title(f'ThunderSearch {VERSION}  --xzajyjs')
     Application(master=root)
     root.mainloop()
