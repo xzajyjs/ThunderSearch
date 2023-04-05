@@ -1,5 +1,7 @@
 import os
 import json
+import sqlite3
+
 import pymysql
 import requests
 import tkinter as tk
@@ -23,7 +25,7 @@ import module.quake.resource as quake_resource
 import module.quake.host_search as quake_hostsearch
 import module.quake.service_search as quake_servicesearch
 
-VERSION = "v2.3.2"
+VERSION = "v2.3.3"
 
 class Application(tk.Frame):
     def __init__(self, master):
@@ -34,7 +36,7 @@ class Application(tk.Frame):
         self.language = self.dic['language']
         self.setLanguage(language=self.language)
         self.pack()
-        
+
 
     def createWidget(self):
         self.notebook = Notebook(self)
@@ -174,6 +176,10 @@ https://quake.360.cn/quake/#/help?id=5eb238f110d2e850d5c6aec8&title=%E6%A3%80%E7
         self.label_dbUser.grid(row=6,column=2)
         self.label_dbPass = tk.Label(config_frame,text='密码')
         self.label_dbPass.grid(row=7,column=2)
+        self.label_sqliteConfig = tk.Label(config_frame, text='Sqlite配置')
+        self.label_sqliteConfig.grid(row=8, column=2, columnspan=2)
+        self.label_sqlite = tk.Label(config_frame, text='Sqlite路径')
+        self.label_sqlite.grid(row=9, column=2)
         self.FILE = tk.Entry(config_frame, width=30,borderwidth=1)
         self.FILE.grid(row=1,column=3)
         self.DATABASE_HOST = tk.Entry(config_frame, width=30,borderwidth=1)
@@ -186,6 +192,8 @@ https://quake.360.cn/quake/#/help?id=5eb238f110d2e850d5c6aec8&title=%E6%A3%80%E7
         self.DATABASE_USERNAME.grid(row=6,column=3)
         self.DATABASE_PASSWORD = tk.Entry(config_frame, width=30,borderwidth=1,show="*")
         self.DATABASE_PASSWORD.grid(row=7,column=3)
+        self.SQLITE_FILENAME = tk.Entry(config_frame, width=30, borderwidth=1)
+        self.SQLITE_FILENAME.grid(row=9, column=3)
 
 
         self.SAVE = tk.Button(config_frame, text='保存配置', command=self.save_config)
@@ -221,7 +229,7 @@ https://quake.360.cn/quake/#/help?id=5eb238f110d2e850d5c6aec8&title=%E6%A3%80%E7
             'Fofa':['数据查询','个人信息'],
             'Quake':['主机搜索','服务搜索','个人信息']
         }
-        
+
         self.query_mode_choice = tk.StringVar(self)
         self.MODE = tk.OptionMenu(self.search_frame,self.query_mode_choice,'')
         self.MODE.grid(row=0,column=5)
@@ -234,7 +242,7 @@ https://quake.360.cn/quake/#/help?id=5eb238f110d2e850d5c6aec8&title=%E6%A3%80%E7
         self.label_saveMode.grid(row=0,column=6)
         self.save_mode_choice = tk.StringVar(self)
         self.save_mode_choice.set('不保存')
-        self.SAVE_MODE = tk.OptionMenu(self.search_frame,self.save_mode_choice,'不保存','存文件','数据库')
+        self.SAVE_MODE = tk.OptionMenu(self.search_frame,self.save_mode_choice,'不保存','存文件','mysql', 'sqlite')
         self.SAVE_MODE.grid(row=0,column=7)
 
         self.label_searchEngine = tk.Label(self.search_frame, text='搜索引擎:')
@@ -304,6 +312,8 @@ https://quake.360.cn/quake/#/help?id=5eb238f110d2e850d5c6aec8&title=%E6%A3%80%E7
             self.label_dbName['text'] = "dbName"
             self.label_dbUser['text'] = "User"
             self.label_dbPass['text'] = "Pass"
+            self.label_sqliteConfig['text'] = "SqliteConfig"
+            self.label_sqlite['text'] = "SqlitePath"
             self.SAVE.configure(text='SaveConfig')
             self.LOAD.configure(text='LoadConfig')
             self.CLEAR.configure(text='ClearConfig')
@@ -334,6 +344,8 @@ https://quake.360.cn/quake/#/help?id=5eb238f110d2e850d5c6aec8&title=%E6%A3%80%E7
             self.label_dbName['text'] = "数据库名"
             self.label_dbUser['text'] = "用户名"
             self.label_dbPass['text'] = "密码"
+            self.label_sqliteConfig['text'] = "Sqlite配置"
+            self.label_sqlite['text'] = "Sqlite路径"
             self.SAVE.configure(text='保存配置')
             self.LOAD.configure(text='读取配置')
             self.CLEAR.configure(text='清空配置')
@@ -363,6 +375,7 @@ https://quake.360.cn/quake/#/help?id=5eb238f110d2e850d5c6aec8&title=%E6%A3%80%E7
         self.DATABASE_DATABASE.delete(0,tk.END)
         self.DATABASE_USERNAME.delete(0,tk.END)
         self.DATABASE_PASSWORD.delete(0,tk.END)
+        self.SQLITE_FILENAME.delete(0, tk.END)
 
 
     def _insert_config(self):    # 插入数据
@@ -378,6 +391,7 @@ https://quake.360.cn/quake/#/help?id=5eb238f110d2e850d5c6aec8&title=%E6%A3%80%E7
         self.DATABASE_DATABASE.insert(tk.END,self.dic['database'])
         self.DATABASE_USERNAME.insert(tk.END,self.dic['username'])
         self.DATABASE_PASSWORD.insert(tk.END,self.dic['password'])
+        self.SQLITE_FILENAME.insert(tk.END, self.dic['sqlitepath'])
 
 
     def _save_config(self):     # 保存数据
@@ -394,7 +408,8 @@ https://quake.360.cn/quake/#/help?id=5eb238f110d2e850d5c6aec8&title=%E6%A3%80%E7
             'port':self.DATABASE_PORT.get(),
             'database':self.DATABASE_DATABASE.get(),
             'username':self.DATABASE_USERNAME.get(),
-            'password':self.DATABASE_PASSWORD.get()
+            'password':self.DATABASE_PASSWORD.get(),
+            'sqlitepath': self.SQLITE_FILENAME.get()
         }
         with open("config.json", "w", encoding='utf8') as f:
             json.dump(self.dic, f)
@@ -405,7 +420,7 @@ https://quake.360.cn/quake/#/help?id=5eb238f110d2e850d5c6aec8&title=%E6%A3%80%E7
             self.dic = json.load(f)
         self._delete_config()
         self._insert_config()
-        
+
 
     def save_config(self):      # 保存配置
         try:
@@ -424,21 +439,33 @@ https://quake.360.cn/quake/#/help?id=5eb238f110d2e850d5c6aec8&title=%E6%A3%80%E7
             messagebox.showerror("Error",e)
         else:
             messagebox.showinfo("Success","清空成功")
-        
+
 
     def db_test(self):
+        # mysql
         try:
-            self.conn = pymysql.connect(database=self.dic['database'],host=self.dic['host'],port=int(self.dic['port']),user=self.dic['username'],password=self.dic['password'])
+            pymysql.connect(database=self.dic['database'],host=self.dic['host'],port=int(self.dic['port']),user=self.dic['username'],password=self.dic['password'])
         except Exception as e:
-            messagebox.showerror(title='Error',message=f'数据库连接失败。 {e}')
+            messagebox.showerror(title='Error',message=f'mysql数据库连接失败。 {e}')
         else:
-            messagebox.showinfo(title='Success',message='数据库连接成功')
+            messagebox.showinfo(title='Success',message='mysql数据库连接成功')
+
+        # sqlite
+        try:
+            if self.dic['sqlitepath'] == "":
+                raise ValueError("Empty path for sqlite!")
+            sqlite3.connect(self.dic['sqlitepath'])
+        except Exception as e:
+            messagebox.showerror(title='Error', message=f'sqlite数据库连接失败。 {e}')
+        else:
+
+            messagebox.showinfo(title='Success', message='sqlite数据库连接成功')
 
 
     def delete_tree(self,tree):
         for item in tree.get_children():
             tree.delete(item)
-    
+
 
     def delete_access_token(self):
         try:
@@ -478,7 +505,7 @@ https://quake.360.cn/quake/#/help?id=5eb238f110d2e850d5c6aec8&title=%E6%A3%80%E7
         self.zoomeye_headers = {
             "API-KEY":api_key
         }
-        
+
 
     def zoomeye_user_pass_login(self,username,password):
         url = 'https://api.zoomeye.org/user/login'
@@ -506,12 +533,12 @@ https://quake.360.cn/quake/#/help?id=5eb238f110d2e850d5c6aec8&title=%E6%A3%80%E7
 
     def thread(self):
         if self.query_mode_choice.get() == "个人信息" or self.QUERY.get() != "":
-            if self.save_mode_choice.get() == "数据库":
+            if self.save_mode_choice.get() == "mysql":
                 try:
                     self.conn = pymysql.connect(database=self.dic['database'],host=self.dic['host'],port=int(self.dic['port']),user=self.dic['username'],password=self.dic['password'])
                 except Exception as e:
                     messagebox.showerror(title='Error',message=f'[!] 数据库连接失败! {e}')
-                    return 
+                    return
                 else:
                     self.log_insert('[+] 数据库连接成功\n')
                     self.cursor = self.conn.cursor()
@@ -525,6 +552,15 @@ https://quake.360.cn/quake/#/help?id=5eb238f110d2e850d5c6aec8&title=%E6%A3%80%E7
 
 
     def run(self):
+        if self.save_mode_choice.get() == "sqlite":
+            try:
+                self.sqlite_conn = sqlite3.connect(self.dic['sqlitepath'])
+            except Exception as e:
+                messagebox.showerror(title='Error', message=f'[!] 数据库连接失败! {e}')
+                return
+            else:
+                self.log_insert('[+] 数据库连接成功\n')
+                self.sqlite_cursor = self.sqlite_conn.cursor()
         # zoomeye
         if self.search_engine_choice.get() == "Zoomeye":
             self.log_insert('[Zoomeye] Start searching...\n')
@@ -540,7 +576,7 @@ https://quake.360.cn/quake/#/help?id=5eb238f110d2e850d5c6aec8&title=%E6%A3%80%E7
                     self.log_insert(f'[!] Error: {error_info}\n')
 
                 j=1
-                if self.save_mode_choice.get() == "数据库":
+                if self.save_mode_choice.get() == "mysql":
                     self.cursor.execute('''CREATE TABLE if not exists zoomeye_host_search(
                     ip text,port text,os text,app text,version text,title text,city text,country text,continents text);''')
                     self.conn.commit()
@@ -549,6 +585,17 @@ https://quake.360.cn/quake/#/help?id=5eb238f110d2e850d5c6aec8&title=%E6%A3%80%E7
                         self.cursor.execute(f'''INSERT INTO zoomeye_host_search VALUES("{each_dic["ip"]}","{each_dic["port"]}","{each_dic["os"]}","{each_dic["app"]}","{each_dic["version"]}","{each_dic["title"]}","{each_dic["city"]}","{each_dic["country"]}","{each_dic["continents"]}")''')
                         self.conn.commit()
                         j+=1
+                elif self.save_mode_choice.get() == "sqlite":
+                    self.sqlite_cursor.execute('''CREATE TABLE if not exists zoomeye_host_search(
+                                        ip text,port text,os text,app text,version text,title text,city text,country text,continents text);''')
+                    self.sqlite_conn.commit()
+                    for each_dic in zoomeye_hostsearch.info_list:
+                        self.TREEVIEW.insert("", tk.END, values=(
+                        j, each_dic['ip'], each_dic['port'], each_dic['os'], each_dic['title']))
+                        self.sqlite_cursor.execute(
+                            f'''INSERT INTO zoomeye_host_search VALUES("{each_dic["ip"]}","{each_dic["port"]}","{each_dic["os"]}","{each_dic["app"]}","{each_dic["version"]}","{each_dic["title"]}","{each_dic["city"]}","{each_dic["country"]}","{each_dic["continents"]}")''')
+                        self.sqlite_conn.commit()
+                        j += 1
                 elif self.save_mode_choice.get() == "存文件":
                     with open(self.FILE.get(),"w",encoding="utf-8") as f:
                         f.write("ip,port,os,app,version,title,city,country,continents\n")
@@ -568,7 +615,7 @@ https://quake.360.cn/quake/#/help?id=5eb238f110d2e850d5c6aec8&title=%E6%A3%80%E7
                     self.log_insert(f'[!] Error: {error_info}\n')
 
                 j=1
-                if self.save_mode_choice.get() == "数据库":
+                if self.save_mode_choice.get() == "mysql":
                     self.cursor.execute('''CREATE TABLE if not exists zoomeye_domain_ip(
                     ip text,name text);''')
                     self.conn.commit()
@@ -577,6 +624,16 @@ https://quake.360.cn/quake/#/help?id=5eb238f110d2e850d5c6aec8&title=%E6%A3%80%E7
                         self.cursor.execute(f'''INSERT INTO zoomeye_domain_ip VALUES("{each_dic['ip']}","{each_dic['name']}")''')
                         self.conn.commit()
                         j+=1
+                elif self.save_mode_choice.get() == "sqlite":
+                    self.sqlite_cursor.execute('''CREATE TABLE if not exists zoomeye_domain_ip(
+                                        ip text,name text);''')
+                    self.sqlite_conn.commit()
+                    for each_dic in zoomeye_domain_ip.info_list:
+                        self.TREEVIEW.insert("", tk.END, values=(j, each_dic['ip'], each_dic['name'], None))
+                        self.sqlite_cursor.execute(
+                            f'''INSERT INTO zoomeye_domain_ip VALUES("{each_dic['ip']}","{each_dic['name']}")''')
+                        self.sqlite_conn.commit()
+                        j += 1
                 elif self.save_mode_choice.get() == "存文件":
                     with open(self.FILE.get(),"w",encoding="utf-8") as f:
                         f.write("ip ,name\n")
@@ -596,7 +653,7 @@ https://quake.360.cn/quake/#/help?id=5eb238f110d2e850d5c6aec8&title=%E6%A3%80%E7
                     self.log_insert(f'[!] Error: {error_info}\n')
 
                 j = 1
-                if self.save_mode_choice.get() == "数据库":
+                if self.save_mode_choice.get() == "mysql":
                     self.cursor.execute('''CREATE TABLE if not exists zoomeye_web_search(
                     ip text,site text,title text,city text,country text,continent text,isp text);''')
                     self.conn.commit()
@@ -604,6 +661,15 @@ https://quake.360.cn/quake/#/help?id=5eb238f110d2e850d5c6aec8&title=%E6%A3%80%E7
                         self.TREEVIEW.insert("",tk.END,values=(j,each_dic['ip'],each_dic['site'],'',each_dic['title']))
                         self.cursor.execute(f'''INSERT INTO zoomeye_web_search VALUES("{each_dic["ip"]}","{each_dic["site"]}","{each_dic["title"]}","{each_dic["city"]}","{each_dic["country"]}","{each_dic["continent"]}","{each_dic['isp']}");''')
                         self.conn.commit()
+                        j+=1
+                elif self.save_mode_choice.get() == "sqlite":
+                    self.sqlite_cursor.execute('''CREATE TABLE if not exists zoomeye_web_search(
+                    ip text,site text,title text,city text,country text,continent text,isp text);''')
+                    self.sqlite_conn.commit()
+                    for each_dic in zoomeye_websearch.info_list:
+                        self.TREEVIEW.insert("",tk.END,values=(j,each_dic['ip'],each_dic['site'],'',each_dic['title']))
+                        self.sqlite_cursor.execute(f'''INSERT INTO zoomeye_web_search VALUES("{each_dic["ip"]}","{each_dic["site"]}","{each_dic["title"]}","{each_dic["city"]}","{each_dic["country"]}","{each_dic["continent"]}","{each_dic['isp']}");''')
+                        self.sqlite_conn.commit()
                         j+=1
                 elif self.save_mode_choice.get() == "存文件":
                     with open(self.FILE.get(),"w",encoding="utf-8") as f:
@@ -623,7 +689,7 @@ https://quake.360.cn/quake/#/help?id=5eb238f110d2e850d5c6aec8&title=%E6%A3%80%E7
             else:
                 self.log_insert(f'[Zoomeye] End of search. Complete information has been stored by mode "{self.save_mode_choice.get()}".\n')
                 self.log_insert(zoomeye_resource.resource(mode="easy"))
-        
+
         # fofa
         elif self.search_engine_choice.get() == "Fofa":
             self.log_insert('[Fofa] Start searching...\n')
@@ -640,7 +706,7 @@ https://quake.360.cn/quake/#/help?id=5eb238f110d2e850d5c6aec8&title=%E6%A3%80%E7
                 for each_dic in fofa_search_all.info_list:
                     self.TREEVIEW.insert("", tk.END, values=(j, each_dic['ip'], each_dic['port']+"/"+each_dic['domain'], each_dic['os'], each_dic['title']))
                     j+=1
-                if self.save_mode_choice.get() == "数据库":
+                if self.save_mode_choice.get() == "mysql":
                     self.cursor.execute('''CREATE TABLE if not exists fofa_search_all(
                     ip text,port text,host text,domain text,os text,server text,title text,protocol text,country_name text,region text,city text,as_organization text,icp text,jarm text);''')
                     self.conn.commit()
@@ -649,13 +715,21 @@ https://quake.360.cn/quake/#/help?id=5eb238f110d2e850d5c6aec8&title=%E6%A3%80%E7
                             "{each['ip']}","{each['port']}","{each['host']}","{each['domain']}","{each['os']}","{each['server']}","{each['title']}","{each['protocol']}","{each['country_name']}","{each['region']}","{each['city']}","{each['as_organization']}","{each['icp']}","{each['jarm']}"
                         )''')
                         self.conn.commit()
-                    pass
-                if self.save_mode_choice.get() == "存文件":
+                elif self.save_mode_choice.get() == "sqlite":
+                    self.sqlite_cursor.execute('''CREATE TABLE if not exists fofa_search_all(
+                                   ip text,port text,host text,domain text,os text,server text,title text,protocol text,country_name text,region text,city text,as_organization text,icp text,jarm text);''')
+                    self.sqlite_conn.commit()
+                    for each in fofa_search_all.info_list:
+                        self.sqlite_cursor.execute(f'''insert into fofa_search_all values(
+                                           "{each['ip']}","{each['port']}","{each['host']}","{each['domain']}","{each['os']}","{each['server']}","{each['title']}","{each['protocol']}","{each['country_name']}","{each['region']}","{each['city']}","{each['as_organization']}","{each['icp']}","{each['jarm']}"
+                                       )''')
+                        self.sqlite_conn.commit()
+                elif self.save_mode_choice.get() == "存文件":
                     with open(self.FILE.get(),"w",encoding="utf-8") as f:
                         f.write("ip,port,host,domain,os,server,title,protocol,country_name,region,city,as_organization,icp,jarm\n")
                         for each_dic in fofa_search_all.info_list:
-                            f.write(f"{each_dic['ip']},{each_dic['port']},{each_dic['host']},{each_dic['domain']},{each_dic['os']},{each_dic['server']},{each_dic['title']},{each_dic['protocol']},{each_dic['country_name']},{each_dic['region']},{each_dic['city']},{each_dic['as_organization']},{each_dic['icp']},{each_dic['jarm']}\n")        
-                if self.save_mode_choice.get() == "不保存":
+                            f.write(f"{each_dic['ip']},{each_dic['port']},{each_dic['host']},{each_dic['domain']},{each_dic['os']},{each_dic['server']},{each_dic['title']},{each_dic['protocol']},{each_dic['country_name']},{each_dic['region']},{each_dic['city']},{each_dic['as_organization']},{each_dic['icp']},{each_dic['jarm']}\n")
+                elif self.save_mode_choice.get() == "不保存":
                     pass
                 self.log_insert(f'[Fofa] End of Search. Obtain totally {fofa_search_all.total_num}\nComplete information has been stored by mode "{self.save_mode_choice.get()}".\n')
 
@@ -675,14 +749,14 @@ https://quake.360.cn/quake/#/help?id=5eb238f110d2e850d5c6aec8&title=%E6%A3%80%E7
                     for each_dic in quake_hostsearch.info_list:
                         self.TREEVIEW.insert("", tk.END, values=(j, each_dic['ip'], each_dic['service_port'], each_dic['os_name'], ''))
                         j+=1
-                if self.save_mode_choice.get() == "存文件":
+                elif self.save_mode_choice.get() == "存文件":
                     with open(self.FILE.get(),"w",encoding="utf-8") as f:
                         f.write("ip,service_port,service_name,service_version,service_id,domains,hostname,os_name,os_version,country_en,city_en\n")
                         for each_dic in quake_hostsearch.info_list:
                             f.write(f'''{each_dic['ip']},{each_dic['service_port']},{each_dic['service_name']},{each_dic['service_version']},{each_dic['service_id']},{each_dic['domains']},{each_dic['hostname']},{each_dic['os_name']},{each_dic['os_version']},{each_dic['country_en']},{each_dic['city_en']}\n''')
                             self.TREEVIEW.insert("", tk.END, values=(j, each_dic['ip'], each_dic['service_port'], each_dic['os_name'], ''))
                             j+=1
-                if self.save_mode_choice.get() == "数据库":
+                elif self.save_mode_choice.get() == "mysql":
                     self.cursor.execute('''CREATE TABLE if not exists quake_host_search(
                     ip text,service_port text,service_name text,service_version text,service_id text,domains text,hostname text,os_name text,os_version text,country_en text,city_en text);''')
                     self.conn.commit()
@@ -690,6 +764,15 @@ https://quake.360.cn/quake/#/help?id=5eb238f110d2e850d5c6aec8&title=%E6%A3%80%E7
                         self.TREEVIEW.insert("", tk.END, values=(j, each_dic['ip'], each_dic['service_port'], each_dic['os_name'], ''))
                         self.cursor.execute(f'''INSERT INTO quake_host_search VALUES("{each_dic["ip"]}","{each_dic["service_port"]}","{each_dic["service_name"]}","{each_dic["service_version"]}","{each_dic["service_id"]}","{each_dic["domains"]}","{each_dic["hostname"]}","{each_dic["os_name"]}","{each_dic["os_version"]}","{each_dic["country_en"]}","{each_dic["city_en"]}")''')
                         self.conn.commit()
+                        j+=1
+                elif self.save_mode_choice.get() == "sqlite":
+                    self.sqlite_cursor.execute('''CREATE TABLE if not exists quake_host_search(
+                    ip text,service_port text,service_name text,service_version text,service_id text,domains text,hostname text,os_name text,os_version text,country_en text,city_en text);''')
+                    self.sqlite_conn.commit()
+                    for each_dic in quake_hostsearch.info_list:
+                        self.TREEVIEW.insert("", tk.END, values=(j, each_dic['ip'], each_dic['service_port'], each_dic['os_name'], ''))
+                        self.sqlite_cursor.execute(f'''INSERT INTO quake_host_search VALUES("{each_dic["ip"]}","{each_dic["service_port"]}","{each_dic["service_name"]}","{each_dic["service_version"]}","{each_dic["service_id"]}","{each_dic["domains"]}","{each_dic["hostname"]}","{each_dic["os_name"]}","{each_dic["os_version"]}","{each_dic["country_en"]}","{each_dic["city_en"]}")''')
+                        self.sqlite_conn.commit()
                         j+=1
             if self.query_mode_choice.get() == "服务搜索":
                 error_info = quake_servicesearch.quake_service_search(query=query,page=self.page_choice.get(),key=self.dic['quake_api'])
@@ -701,14 +784,14 @@ https://quake.360.cn/quake/#/help?id=5eb238f110d2e850d5c6aec8&title=%E6%A3%80%E7
                     for each_dic in quake_servicesearch.info_list:
                         self.TREEVIEW.insert("", tk.END, values=(j, each_dic['ip'], each_dic['port'], each_dic['os_name'], each_dic['service_title']))
                         j += 1
-                if self.save_mode_choice.get() == "存文件":
+                elif self.save_mode_choice.get() == "存文件":
                     with open(self.FILE.get(),"w",encoding="utf-8") as f:
                         f.write("ip,port,org,hostname,service_title,service_server,transport,os_name,os_version,service_name,country_en,city_en\n")
                         for each_dic in quake_servicesearch.info_list:
                             f.write(f'''{each_dic['ip']},{each_dic['port']},{each_dic['org']},{each_dic['hostname']},{each_dic['service_title']},{each_dic['service_server']},{each_dic['transport']},{each_dic['os_name']},{each_dic['os_version']},{each_dic['service_name']},{each_dic['country_en']},{each_dic['city_en']}\n''')
                             self.TREEVIEW.insert("", tk.END, values=(j, each_dic['ip'], each_dic['port'], each_dic['os_name'], each_dic['service_title']))
                             j += 1
-                if self.save_mode_choice.get() == "数据库":
+                elif self.save_mode_choice.get() == "mysql":
                     self.cursor.execute('''CREATE TABLE if not exists quake_service_search(
                     ip text,port text,org text,hostname text,service_title text,service_server text,transport text,os_name text,service_name text,country_en text,city_en text,os_version text);''')
                     self.conn.commit()
@@ -717,19 +800,28 @@ https://quake.360.cn/quake/#/help?id=5eb238f110d2e850d5c6aec8&title=%E6%A3%80%E7
                         self.cursor.execute(f'''INSERT INTO quake_service_search VALUES("{each_dic["ip"]}","{each_dic["port"]}","{each_dic["org"]}","{each_dic["hostname"]}","{each_dic["service_title"]}","{each_dic["service_server"]}","{each_dic["transport"]}","{each_dic["os_name"]}","{each_dic["service_name"]}","{each_dic["country_en"]}","{each_dic["city_en"]}","{each_dic["os_version"]}")''')
                         self.conn.commit()
                         j+=1
+                elif self.save_mode_choice.get() == "sqlite":
+                    self.sqlite_cursor.execute('''CREATE TABLE if not exists quake_service_search(
+                    ip text,port text,org text,hostname text,service_title text,service_server text,transport text,os_name text,service_name text,country_en text,city_en text,os_version text);''')
+                    self.sqlite_conn.commit()
+                    for each_dic in quake_servicesearch.info_list:
+                        self.TREEVIEW.insert("", tk.END, values=(j, each_dic['ip'], each_dic['port'], each_dic['os_name'], each_dic['service_title']))
+                        self.sqlite_cursor.execute(f'''INSERT INTO quake_service_search VALUES("{each_dic["ip"]}","{each_dic["port"]}","{each_dic["org"]}","{each_dic["hostname"]}","{each_dic["service_title"]}","{each_dic["service_server"]}","{each_dic["transport"]}","{each_dic["os_name"]}","{each_dic["service_name"]}","{each_dic["country_en"]}","{each_dic["city_en"]}","{each_dic["os_version"]}")''')
+                        self.sqlite_conn.commit()
+                        j+=1
             if self.query_mode_choice.get() == "个人信息":
                 text = quake_resource.quake_resource_search(key=self.dic['quake_api'],mode="complete")
                 self.log_insert(text)
             else:
                 self.log_insert(f'[Quake] End of search. Complete information has been stored by mode "{self.save_mode_choice.get()}".\n')
                 self.log_insert(quake_resource.quake_resource_search(key=self.dic['quake_api'],mode="easy"))
-            
 
-if __name__=='__main__':
+
+if __name__ == '__main__':
     root = tk.Tk()
-    root.geometry('785x526+320+100')
-    root.minsize(width=785, height=526)
-    root.maxsize(width=785, height=526)
+    root.geometry('793x526+320+100')
+    root.minsize(width=793, height=526)
+    root.maxsize(width=793, height=526)
     root.title(f'ThunderSearch {VERSION}  --xzajyjs')
     Application(master=root)
     root.mainloop()
