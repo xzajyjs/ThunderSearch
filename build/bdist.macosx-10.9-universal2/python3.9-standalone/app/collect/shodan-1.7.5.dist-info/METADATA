@@ -1,0 +1,24 @@
+Metadata-Version: 2.1
+Name: shodan
+Version: 1.7.5
+Summary: Python library and command-line utility for Shodan (https://developer.shodan.io)
+Home-page: http://github.com/achillean/shodan-python/tree/master
+Author: John Matherly
+Author-email: jmath@shodan.io
+License: UNKNOWN
+Keywords: security,network
+Platform: UNKNOWN
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Requires-Dist: click
+Requires-Dist: click-plugins
+Requires-Dist: colorama
+Requires-Dist: requests (>=2.2.1)
+Requires-Dist: XlsxWriter
+
+UNKNOWN
+
+

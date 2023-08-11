@@ -3,7 +3,7 @@
     <a href="https://github.com/xzajyjs/ThunderSearch"><img alt="ThunderSearch" src="https://img.shields.io/github/stars/xzajyjs/ThunderSearch.svg"></a>
     <a href="https://github.com/xzajyjs/ThunderSearch/releases"><img alt="ThunderSearch" src="https://img.shields.io/github/release/xzajyjs/ThunderSearch.svg"></a>
     <a href="https://github.com/xzajyjs/ThunderSearch/issues"><img alt="ThunderSearch" src="https://img.shields.io/github/issues/xzajyjs/ThunderSearch"></a>
-    <a href="https://github.com/xzajyjs/ThunderSearch"><img alt="ThunderSearch" src="https://img.shields.io/badge/python-3.7%20%7C%203.8%20%7C%203.9-blue"></a>
+    <a href="https://github.com/xzajyjs/ThunderSearch"><img alt="ThunderSearchz1" src="https://img.shields.io/badge/python-3.8+-blue"></a>
     <a href="https://github.com/xzajyjs/ThunderSearch"><img alt="ThunderSearch" src="https://img.shields.io/github/followers/xzajyjs?color=red&label=Followers"></a>
     <a href="https://github.com/xzajyjs/ThunderSearch"><img alt="ThunderSearch" src="https://img.shields.io/badge/ThunderSearch-green"></a>
 </p>
@@ -32,6 +32,7 @@ ThunderSearch（闪电搜索器）是一款使用多个(目前支持Fofa、Zoome
 "fofa_username": ""
 "fofa_api": ""
 "quake_api": ""
+"shodan_api": ""
 "file": ""
 "host": ""
 "port": ""
@@ -42,9 +43,10 @@ ThunderSearch（闪电搜索器）是一款使用多个(目前支持Fofa、Zoome
 
 > 修改language的参数，可修改语言。目前支持：`ch`(中文), `en`(英文)
 
-### -> Build
+### -> 构建和运行
 ```
 pip3 install -r requirements.txt
+python3 ThunderSearch.py
 ```
 > Recommend Python version: 3.8+
 ---
@@ -58,7 +60,7 @@ pip3 install -r requirements.txt
 - [x] 优化登陆模式
 - [x] 增加web应用搜索模块
 - [x] 增加多种结果导出模式
-- [ ] 支持更多搜索引擎(目前支持Fofa、Zoomeye和Quake)，如Shodan、Hunter等
+- [ ] 支持更多搜索引擎(目前支持Fofa、Zoomeye、Quake和Shodan)，如Hunter等
 ---
 ## 🏝 更新日志
 
@@ -68,6 +70,7 @@ pip3 install -r requirements.txt
 ## 🌏 效果演示
 ![](pic/fofa.png) 
 ![](pic/quake.png) 
-![](pic/config.png)  
+![](pic/shodan.jpg)
+![](pic/config.jpg)  
 ![](pic/mysql.png)  
 ![](pic/csv.png)

@@ -83,3 +83,20 @@
 | country_en | String | 国家名(En) |
 | city_en | String | 城市名(En) |
 | os_version | String | 系统版本 |
+
+---
+
+## Shodan
+|    统计项    | 类型 |   说明    |
+|:-----:| :----: |:-------:|
+|    ip     | String |  ip地址   |
+|   port    | String |   端口    |
+|  domains  | String |   域名    |
+|   title   | String |   标题    |
+|  product  | String |  软件或产品  |
+|    os     | String |   系统    |
+|   info    | String | 产品相关信息  |
+|    isp    | String | 网络服务提供商 |
+|  country  | String |   国家    |
+|   city    | String |   城市    |
+| timestamp | String |   时间戳   |

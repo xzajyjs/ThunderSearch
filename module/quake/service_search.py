@@ -1,7 +1,6 @@
 import requests
 
 info_list = []
-session = requests.Session()
 
 
 def quake_service_search(query, page, key):
@@ -13,32 +12,32 @@ def quake_service_search(query, page, key):
     }
     data = {
         "query": query,
-        "size": int(page)*10,
+        "size": int(page) * 10,
     }
     try:
-        resp = session.post("https://quake.360.cn/api/v3/search/quake_service",headers=headers,json=data)
+        resp = requests.post("https://quake.360.cn/api/v3/search/quake_service", headers=headers, json=data)
+        if resp.status_code == 401:
+            return "API-KEY error."
         matches = resp.json()['data']
         for each in matches:
-            print(each['service']['name'])
-            each_dic = {}
-            each_dic['ip'] = each['ip']
-            each_dic['port'] = each['port']
-            each_dic['org'] = each['org']
-            each_dic['hostname'] = each['hostname']
-            each_dic['service_name'] = each['service']['name']
-            try:
-                each_dic['service_title'] = each['service'][each_dic['service_name']]['title']
-                each_dic['service_server'] = each['service'][each_dic['service_name']]['server']
-            except Exception as e:
-                each_dic['service_title'] = ""
-                each_dic['service_server'] = ""
-            each_dic['transport'] = each['transport']
-            each_dic['os_name'] = each['os_name']
-            each_dic['country_en'] = each['location']['country_en']
-            each_dic['city_en'] = each['location']['city_en']
-            each_dic['os_version'] = each['os_version']
-            info_list.append(each_dic)  
+            each_dic = {
+                'ip': each.get('ip', None),
+                'port': each.get('port', None),
+                'org': each.get('org', None),
+                'hostname': each.get('hostname', None),
+                'service_name': each.get('service', {}).get('name', None),
+                'service_title': each.get('service', {}).get(each.get('service', {}).get('name', None), {}).get('title',
+                                                                                                                None),
+                'service_server': each.get('service', {}).get(each.get('service', {}).get('name', None), {}).get(
+                    'server', None),
+                'transport': each.get('transport', None),
+                'os_name': each.get('os_name', None),
+                'country_en': each.get('location', {}).get('country_en', None),
+                'city_en': each.get('location', {}).get('city_en', None),
+                'os_version': each.get('os_version', None)
+            }
+
+            info_list.append(each_dic)
 
     except Exception as e:
         return f"{str(e)}\n"
-    return None

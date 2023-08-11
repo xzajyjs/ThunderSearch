@@ -1,36 +1,47 @@
 import requests
 from concurrent.futures import ThreadPoolExecutor
+import threading
 
 info_list = []
 headers = {}
 session = requests.Session()
+lock = threading.Lock()
+
 
 def web_search(query, page, thread):
     global info_list
     info_list = []
     with ThreadPoolExecutor(thread) as t:
-        for i in range(1,int(page)+1):
-            t.submit(web_search_threadpool, query=query, page=i)
-    return ("End of search.\n")
+        return_info = []
+        for i in range(1, int(page) + 1):
+            return_info.append(t.submit(web_search_threadpool, query=query, page=i))
+
+    for res in return_info:
+        if res.result() is not None:
+            return res.result()
+    return None
+
 
 def web_search_threadpool(query, page):
-    url = f'https://api.zoomeye.org/web/search?query={query}&facets=app,os&page={page}'
-    # print(url)
+    url = f'https://api.zoomeye.org/web/search?query={query}&page={page}'
     try:
-        matches = session.get(url, headers=headers).json()
-        # print(matches)
+        matches = requests.get(url, headers=headers).json()
+        if matches['total'] == 0:
+            return 'Total: 0'
+        if "'error': '" in matches:
+            return matches['message']
         for each in matches['matches']:
-            each_dic = {}
-            each_dic['ip'] = ";".join(each['ip'])
-            each_dic['site'] = each['site']
-            each_dic['title'] = each['title']
-            each_dic['city'] = each['geoinfo']['city']['names']['en']
-            each_dic['country'] = each['geoinfo']['country']['names']['en']
-            each_dic['continent'] = each['geoinfo']['continent']['names']['en']
-            each_dic['isp'] = each['geoinfo']['isp']
-            info_list.append(each_dic)
+            each_dic = {
+                'ip': ";".join(each.get('ip', [])),
+                'site': each.get('site', None),
+                'title': each.get('title', None),
+                'city': each.get('geoinfo', {}).get('city', {}).get('names', {}).get('en', None),
+                'country': each.get('geoinfo', {}).get('country', {}).get('names', {}).get('en', None),
+                'continent': each.get('geoinfo', {}).get('continent', {}).get('names', {}).get('en', None),
+                'isp': each.get('geoinfo', {}).get('isp', None)
+            }
+            with lock:
+                info_list.append(each_dic)
+        return None
     except Exception as e:
-        if str(e.message) == 'matches':
-            return ('[-] info : account was break, excceeding the max limitations\n')
-        else:
-            return (f'[-] info : {str(e.message)}\n')
+        return f"{str(e)}\n"

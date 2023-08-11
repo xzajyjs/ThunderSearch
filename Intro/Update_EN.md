@@ -1,5 +1,10 @@
 # 🏝 Update Log
 
+## v2.4
+- Support `Shodan` search
+- Optimize the way to obtain search results
+- Optimize Fofa error prompt
+
 ## v2.3.2  
 - Partly english support
 - Adjusted the size of the GUI

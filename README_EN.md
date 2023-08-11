@@ -3,7 +3,7 @@
     <a href="https://github.com/xzajyjs/ThunderSearch"><img alt="ThunderSearch" src="https://img.shields.io/github/stars/xzajyjs/ThunderSearch.svg"></a>
     <a href="https://github.com/xzajyjs/ThunderSearch/releases"><img alt="ThunderSearch" src="https://img.shields.io/github/release/xzajyjs/ThunderSearch.svg"></a>
     <a href="https://github.com/xzajyjs/ThunderSearch/issues"><img alt="ThunderSearch" src="https://img.shields.io/github/issues/xzajyjs/ThunderSearch"></a>
-    <a href="https://github.com/xzajyjs/ThunderSearch"><img alt="ThunderSearch" src="https://img.shields.io/badge/python-3.7%20%7C%203.8%20%7C%203.9-blue"></a>
+    <a href="https://github.com/xzajyjs/ThunderSearch"><img alt="ThunderSearch" src="https://img.shields.io/badge/python-3.8+-blue"></a>
     <a href="https://github.com/xzajyjs/ThunderSearch"><img alt="ThunderSearch" src="https://img.shields.io/github/followers/xzajyjs?color=red&label=Followers"></a>
     <a href="https://github.com/xzajyjs/ThunderSearch"><img alt="ThunderSearch" src="https://img.shields.io/badge/ThunderSearch-green"></a>
 </p>
@@ -32,6 +32,7 @@ ThunderSearch is an information collection tool with GUI interface developed usi
 "fofa_username": ""
 "fofa_api": ""
 "quake_api": ""
+"shodan_api": ""
 "file": ""
 "host": ""
 "port": ""
@@ -40,11 +41,12 @@ ThunderSearch is an information collection tool with GUI interface developed usi
 "password": ""
 ```
 
-> You can change language from ch(Chinese) to en(English).
+> You can change language from `ch`(Chinese) to `en`(English).
 
-### -> Build
+### -> Build and Run
 ```
 pip3 install -r requirements.txt
+python3 ThunderSearch.py
 ```
 > Recommend Python version: 3.8+
 ---
@@ -58,7 +60,7 @@ pip3 install -r requirements.txt
 - [x] Optimized login mode
 - [x] Add web application search module
 - [x] Add multiple result export
-- [ ] Support more search engines (currently supports Fofa, Zoomeye and Quake), such as Shodan, Hunter, etc.
+- [ ] Support more search engines (currently supports Fofa, Zoomeye, Quake and Shodan), such as Hunter, etc.
 ---
 ## 🏝 Update Log
 
@@ -68,6 +70,7 @@ pip3 install -r requirements.txt
 ## 🌏 Screenshots
 ![](pic/fofa.png) 
 ![](pic/quake.png) 
-![](pic/config.png)  
+![](pic/shodan.jpg)
+![](pic/config.jpg)  
 ![](pic/mysql.png)  
 ![](pic/csv.png)

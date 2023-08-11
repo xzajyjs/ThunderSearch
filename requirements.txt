@@ -2,3 +2,4 @@ requests
 sqlite3
 tk==0.1.0
 PyMySQL==1.0.2
+shodan

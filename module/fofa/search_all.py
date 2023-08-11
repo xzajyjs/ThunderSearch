@@ -5,8 +5,9 @@ total_num = 0
 info_list = []
 session = requests.session()
 
-def fofa_search(email,key,query,size):
-    global info_list,total_num
+
+def fofa_search(email, key, query, size):
+    global info_list, total_num
     info_list = []
     qbase64 = base64.b64encode(query.encode('utf8'))
     params = {
@@ -19,25 +20,28 @@ def fofa_search(email,key,query,size):
     }
     try:
         resp = session.get('https://fofa.info/api/v1/search/all', data=params)
+        if resp.json()['error']:
+            return resp.json()['errmsg']
         data = resp.json()['results']
         total_num = len(data)
         for each in data:
-            each_dic = {}
-            each_dic['ip'] = each[0]
-            each_dic['port'] = each[1]
-            each_dic['protocol'] = each[2]
-            each_dic['country_name'] = each[3]
-            each_dic['region'] = each[4]
-            each_dic['city'] = each[5]
-            each_dic['as_organization'] = each[6]
-            each_dic['host'] = each[7]
-            each_dic['domain'] = each[8]
-            each_dic['os'] = each[9]
-            each_dic['server'] = each[10]
-            each_dic['icp'] = each[11]
-            each_dic['title'] = each[12]
-            each_dic['jarm'] = each[13]
+            each_dic = {
+                'ip': each.get(0, None),
+                'port': each.get(1, None),
+                'protocol': each.get(2, None),
+                'country_name': each.get(3, None),
+                'region': each.get(4, None),
+                'city': each.get(5, None),
+                'as_organization': each.get(6, None),
+                'host': each.get(7, None),
+                'domain': each.get(8, None),
+                'os': each.get(9, None),
+                'server': each.get(10, None),
+                'icp': each.get(11, None),
+                'title': each.get(12, None),
+                'jarm': each.get(13, None)
+            }
             info_list.append(each_dic)
         return None
     except Exception as e:
-        return e
+        return f"{str(e)}\n"
