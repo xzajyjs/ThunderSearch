@@ -25,22 +25,9 @@ def fofa_search(email, key, query, size):
         data = resp.json()['results']
         total_num = len(data)
         for each in data:
-            each_dic = {
-                'ip': each.get(0, None),
-                'port': each.get(1, None),
-                'protocol': each.get(2, None),
-                'country_name': each.get(3, None),
-                'region': each.get(4, None),
-                'city': each.get(5, None),
-                'as_organization': each.get(6, None),
-                'host': each.get(7, None),
-                'domain': each.get(8, None),
-                'os': each.get(9, None),
-                'server': each.get(10, None),
-                'icp': each.get(11, None),
-                'title': each.get(12, None),
-                'jarm': each.get(13, None)
-            }
+            each_dic = {'ip': each[0], 'port': each[1], 'protocol': each[2], 'country_name': each[3], 'region': each[4],
+                        'city': each[5], 'as_organization': each[6], 'host': each[7], 'domain': each[8], 'os': each[9],
+                        'server': each[10], 'icp': each[11], 'title': each[12], 'jarm': each[13]}
             info_list.append(each_dic)
         return None
     except Exception as e:

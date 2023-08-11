@@ -28,7 +28,7 @@ import module.quake.service_search as quake_servicesearch
 # shodan
 import module.shodan.search as shodan_search
 
-VERSION = "v2.4"
+VERSION = "v2.4.1"
 
 
 class Application(tk.Frame):
