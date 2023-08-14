@@ -9,7 +9,7 @@
 </p>
 
 ## 🎸 Intro介绍 ([EN_README](README_EN.md))
-ThunderSearch（闪电搜索器）是一款使用多个(目前支持Fofa、Zoomeye、360Quake，未来将支持Hunter、Shodan等)网络空间搜索引擎官方api开发的GUI界面的信息搜集工具。具体支持查询项[点此](Intro/Statistics.md)
+ThunderSearch（闪电搜索器）是一款使用多个(目前支持`Fofa`、`Shodan`、`Hunter`、`Zoomeye`、`360Quake`)网络空间搜索引擎官方api开发的GUI界面的信息搜集工具。具体支持查询项[点此](Intro/Statistics.md)
 
 - 支持通过通过图形化修改配置信息
 - 支持账号密码和API-KEY登陆

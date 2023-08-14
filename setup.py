@@ -10,7 +10,11 @@ from setuptools import setup
 APP = ['ThunderSearch.py']
 DATA_FILES = []
 OPTIONS = {
-    'iconfile':'LOGO.jpeg'
+    'iconfile': 'LOGO.jpeg',
+    'plist': {
+        'CFBundleShortVersionString': '2.5.0',
+        'NSHumanReadableCopyright': 'Copyright © 2023 xzajyjs All rights reserved.',
+    }
 }
 
 setup(

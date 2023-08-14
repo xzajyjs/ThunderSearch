@@ -9,7 +9,7 @@
 </p>
 
 ## 🎸 Intro ([CN_README](README.md))
-ThunderSearch is an information collection tool with GUI interface developed using the official api of multiple cyberspace search engines. Specific support query items [click here](Intro/Statistics.md).
+ThunderSearch is an information collection tool with GUI interface developed using the official api of multiple cyberspace search engines(Including `Fofa`, `Shodan`, `Hunter`, `Zoomeye`, `Quake`). Specific support query items [click here](Intro/Statistics.md).
 
 - Support for modifying configuration information through graphics
 - Support account password and API-KEY login
@@ -61,7 +61,10 @@ python3 ThunderSearch.py
 - [x] Optimized login mode
 - [x] Add web application search module
 - [x] Add multiple result export
-- [ ] Support more search engines (currently supports Fofa, Zoomeye, Quake and Shodan), such as Hunter, etc.
+- [x] Support more search engines (Fofa, Shodan, Hunter, Zoomeye, Quake)
+- [ ] Sub-engine structure optimization
+- [ ] Search by date
+- [ ] support xlsx export
 ---
 ## 🏝 Update Log
 
