@@ -1,6 +1,11 @@
 # 🏝 Update Log
 
-## v2.4
+## v2.5
+- Support `Hunter` search
+- Add version update detection
+- Appropriately adjust the interface layout
+
+## v2.4.1
 - Support `Shodan` search
 - Optimize the way to obtain search results
 - Optimize Fofa error prompt
@@ -28,7 +33,7 @@
 
 ## v2.0
 - Optimize configuration settings
-- Brand new interface
+- Brand-new interface
 - Support Fofa (coming soon)
 
 ## v1.7.6

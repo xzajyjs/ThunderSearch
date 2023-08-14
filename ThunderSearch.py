@@ -1,6 +1,7 @@
 import os
 import json
 import sqlite3
+import traceback
 
 import pymysql
 import requests
@@ -28,7 +29,10 @@ import module.quake.service_search as quake_servicesearch
 # shodan
 import module.shodan.search as shodan_search
 
-VERSION = "v2.4.1"
+# hunter
+import module.hunter.search as hunter_search
+
+VERSION = "v2.5"
 
 
 class Application(tk.Frame):
@@ -40,6 +44,21 @@ class Application(tk.Frame):
         self.language = self.dic['language']
         self.setLanguage(language=self.language)
         self.pack()
+        self.checkUpdate()
+
+    def checkUpdate(self):
+        url = "https://api.github.com/repos/xzajyjs/ThunderSearch/releases/latest"
+        try:
+            resp = requests.get(url, timeout=3).json()
+            latest_version, latest_version_url = resp['name'], resp['html_url']
+            if VERSION != latest_version:
+                self.log_insert(f'[!] Update to new version {latest_version}: {latest_version_url}\n')
+                return
+        except Exception as e:
+            if 'API rate limit' in resp['message']:
+                self.log_insert("[!] CheckUpdate error: This IP has API limit.\n")
+                return
+            self.log_insert(f"[!] CheckUpdate error: {traceback.format_exc()}.\n")
 
     def createWidget(self):
         self.notebook = Notebook(self)
@@ -55,11 +74,12 @@ class Application(tk.Frame):
         help_text = tk.Text(help_frame, relief=tk.SOLID, borderwidth=1, height=35, width=100, fg='gray')
         help_text.grid(row=0, column=0)
         text = """使用指南:
-1.先填写配置选项卡中的选项(可有选择性填写)
+1.先填写配置选项卡中的选项(有选择性填写)
 2.填写完配置请先点击保存
 3.文件路径请填写绝对路径,如/Users/xxx/fofa.csv
-4.查询页数在fofa和quake查询下乘以10即为查询数据条数
+4.查询页数在Fofa和Quake查询下乘以10即为查询数据条数
 5.Shodan单页搜索为100条
+6.Hunter单页搜索为20条
 =============
 
 Fofa语法
@@ -130,7 +150,13 @@ https://quake.360.cn/quake/#/help?id=5eb238f110d2e850d5c6aec8&title=%E6%A3%80%E7
 Shodan语法
 例如:product:"nginx" city:"Beijing" port:"8088"
 https://www.shodan.io/search/filters
-https://www.shodan.io/search/examples"""
+https://www.shodan.io/search/examples
+============
+
+
+Hunter语法
+例如：domain.suffix="'qianxin.com" && title="北京"
+https://hunter.qianxin.com/"""
         help_text.insert(tk.END, text)
 
         # config_frame
@@ -173,6 +199,12 @@ https://www.shodan.io/search/examples"""
         tk.Label(config_frame, text="API-KEY").grid(row=10, column=0)
         self.SHODAN_API = tk.Entry(config_frame, width=24, show="*", borderwidth=1)
         self.SHODAN_API.grid(row=10, column=1)
+
+        # hunter
+        tk.Label(config_frame, text="Hunter").grid(row=11, column=0, columnspan=2)
+        tk.Label(config_frame, text="API-KEY").grid(row=12, column=0)
+        self.HUNTER_API = tk.Entry(config_frame, width=24, show="*", borderwidth=1)
+        self.HUNTER_API.grid(row=12, column=1)
 
         # 右侧配置
         self.label_otherConfig = tk.Label(config_frame, text='其他配置')
@@ -239,10 +271,11 @@ https://www.shodan.io/search/examples"""
         self.label_mode.grid(row=0, column=4)
 
         self.mode_dict = {
-            'Zoomeye': ['主机搜索', '域名/IP', 'web应用', '个人信息'],
             'Fofa': ['数据查询', '个人信息'],
-            'Quake': ['主机搜索', '服务搜索', '个人信息'],
-            'Shodan': ['数据搜索']
+            'Shodan': ['数据搜索'],
+            'Hunter': ['数据搜索'],
+            'Zoomeye': ['主机搜索', '域名/IP', 'web应用', '个人信息'],
+            'Quake': ['主机搜索', '服务搜索', '个人信息']
         }
 
         self.query_mode_choice = tk.StringVar(self)
@@ -251,7 +284,7 @@ https://www.shodan.io/search/examples"""
 
         self.search_engine_choice = tk.StringVar(self)
         self.search_engine_choice.trace('w', self.update_mode_menu)
-        self.search_engine_choice.set('Zoomeye')
+        self.search_engine_choice.set('Fofa')
 
         self.label_saveMode = tk.Label(self.search_frame, text='存储模式:')
         self.label_saveMode.grid(row=0, column=6)
@@ -277,7 +310,7 @@ https://www.shodan.io/search/examples"""
         self.TREEVIEW['columns'] = ("ID", "IP", "PORT/DOMAIN", "OS", "TITLE")
         self.TREEVIEW.column("ID", width=50)
         self.TREEVIEW.column("IP", width=160)
-        self.TREEVIEW.column("PORT/DOMAIN", width=190)
+        self.TREEVIEW.column("PORT/DOMAIN", width=235)
         self.TREEVIEW.column("OS", width=90)
         self.TREEVIEW.column("TITLE", width=200)
         self.TREEVIEW.heading("ID", text="ID")
@@ -285,7 +318,7 @@ https://www.shodan.io/search/examples"""
         self.TREEVIEW.heading("PORT/DOMAIN", text="PORT/DOMAIN")
         self.TREEVIEW.heading("OS", text="OS")
         self.TREEVIEW.heading("TITLE", text="TITLE")
-        self.LOG = tk.Text(self.search_frame, relief=tk.SOLID, borderwidth=1, height=15, width=98, fg='gray')
+        self.LOG = tk.Text(self.search_frame, relief=tk.SOLID, borderwidth=1, height=15, width=104, fg='gray')
         self.LOG.grid(row=4, column=0, columnspan=10)
 
         # 信息处理
@@ -383,6 +416,7 @@ https://www.shodan.io/search/examples"""
         self.FOFA_API.delete(0, tk.END)
         self.QUAKE_API.delete(0, tk.END)
         self.SHODAN_API.delete(0, tk.END)
+        self.HUNTER_API.delete(0, tk.END)
         self.FILE.delete(0, tk.END)
         self.DATABASE_HOST.delete(0, tk.END)
         self.DATABASE_PORT.delete(0, tk.END)
@@ -399,6 +433,7 @@ https://www.shodan.io/search/examples"""
         self.FOFA_API.insert(tk.END, self.dic['fofa_api'])
         self.QUAKE_API.insert(tk.END, self.dic['quake_api'])
         self.SHODAN_API.insert(tk.END, self.dic['shodan_api'])
+        self.HUNTER_API.insert(tk.END, self.dic['hunter_api'])
         self.FILE.insert(tk.END, self.dic['file'])
         self.DATABASE_HOST.insert(tk.END, self.dic['host'])
         self.DATABASE_PORT.insert(tk.END, self.dic['port'])
@@ -417,6 +452,7 @@ https://www.shodan.io/search/examples"""
             'fofa_api': self.FOFA_API.get(),
             'quake_api': self.QUAKE_API.get(),
             'shodan_api': self.SHODAN_API.get(),
+            'hunter_api': self.HUNTER_API.get(),
             'file': self.FILE.get(),
             'host': self.DATABASE_HOST.get(),
             'port': self.DATABASE_PORT.get(),
@@ -438,7 +474,7 @@ https://www.shodan.io/search/examples"""
         try:
             self._save_config()
         except Exception as e:
-            messagebox.showerror('Error', f'保存失败。错误信息:{e}')
+            messagebox.showerror('Error', f'保存失败。错误信息:{traceback.format_exc()}')
         else:
             messagebox.showinfo('Success', '保存成功')
 
@@ -447,7 +483,7 @@ https://www.shodan.io/search/examples"""
         try:
             self._save_config()
         except Exception as e:
-            messagebox.showerror("Error", e)
+            messagebox.showerror("Error", traceback.format_exc())
         else:
             messagebox.showinfo("Success", "清空成功")
 
@@ -872,8 +908,8 @@ https://www.shodan.io/search/examples"""
             self.log_insert('[Shodan] Start searching...\n')
             query = self.QUERY.get()
             if self.query_mode_choice.get() == "数据搜索":
-                print(query)
-                error_info = shodan_search.search(key=self.dic['shodan_api'], query=str(query), page=self.page_choice.get())
+                error_info = shodan_search.search(key=self.dic['shodan_api'], query=str(query),
+                                                  page=self.page_choice.get())
                 if error_info is not None:
                     self.log_insert(f'[!] Error: {error_info}\n')
 
@@ -923,6 +959,63 @@ https://www.shodan.io/search/examples"""
 
                 self.log_insert(
                     f'[Shodan] End of search. Complete information has been stored by mode "{self.save_mode_choice.get()}".\n')
+
+
+        elif self.search_engine_choice.get() == "Hunter":
+            self.delete_tree(self.TREEVIEW)
+            self.log_insert('[Hunter] Start searching...\n')
+            query = self.QUERY.get()
+            if self.query_mode_choice.get() == "数据搜索":
+                error_info = hunter_search.search(key=self.dic['hunter_api'], query=str(query),
+                                                  page=self.page_choice.get())
+                if error_info is not None:
+                    self.log_insert(f'[!] Error: {error_info}\n')
+
+                j = 1
+                if self.save_mode_choice.get() == "不保存":
+                    for each_dic in hunter_search.info_list:
+                        self.TREEVIEW.insert("", tk.END, values=(
+                            j, each_dic['ip'], str(each_dic['port']) + "/" + str(each_dic['domain']), each_dic['os'],
+                            each_dic['web_title']))
+                        j += 1
+                elif self.save_mode_choice.get() == "存文件":
+                    with open(self.FILE.get(), "w", encoding="utf-8") as f:
+                        f.write(
+                            "url,ip,port,web_title,domain,is_risk_protocol,protocol,base_protocol,status_code,component,os,company,number,country,province,city,updated_at,is_web,as_org,isp,vul_list,is_risk\n")
+                        for each_dic in hunter_search.info_list:
+                            f.write(
+                                f'''{each_dic['url']},{each_dic['ip']},{each_dic['port']},{each_dic['web_title']},{each_dic['domain']},{each_dic['is_risk_protocol']},{each_dic['protocol']},{each_dic['base_protocol']},{each_dic['status_code']},{each_dic['component']},{each_dic['os']},{each_dic['company']},{each_dic['number']},{each_dic['country']},{each_dic['province']},{each_dic['city']},{each_dic['updated_at']},{each_dic['is_web']},{each_dic['as_org']},{each_dic['isp']},{each_dic['vul_list']},{each_dic['is_risk']}\n''')
+                            self.TREEVIEW.insert("", tk.END, values=(
+                                j, each_dic['ip'], str(each_dic['port']) + "/" + str(each_dic['domain']),
+                                each_dic['os'],
+                                each_dic['web_title']))
+                            j += 1
+                elif self.save_mode_choice.get() == "mysql":
+                    self.cursor.execute('''CREATE TABLE if not exists hunter_search(
+                    url text, ip text, port text, web_title text, domain text, is_risk_protocol text, protocol text, base_protocol text, status_code text, component text, os text, company text, number text, country text, province text, city text, updated_at text, is_web text, as_org text, isp text, vul_list text, is_risk text);''')
+                    self.conn.commit()
+                    for each_dic in hunter_search.info_list:
+                        self.TREEVIEW.insert("", tk.END, values=(
+                            j, each_dic['ip'], str(each_dic['port']) + "/" + str(each_dic['domain']), each_dic['os'],
+                            each_dic['web_title']))
+                        self.cursor.execute(
+                            f'''INSERT INTO hunter_search VALUES("{each_dic['url']}","{each_dic['ip']}","{each_dic['port']}","{each_dic['web_title']}","{each_dic['domain']}","{each_dic['is_risk_protocol']}","{each_dic['protocol']}","{each_dic['base_protocol']}","{each_dic['status_code']}","{each_dic['component']}","{each_dic['os']}","{each_dic['company']}","{each_dic['number']}","{each_dic['country']}","{each_dic['province']}","{each_dic['city']}","{each_dic['updated_at']}","{each_dic['is_web']}","{each_dic['as_org']}","{each_dic['isp']}","{each_dic['vul_list']}","{each_dic['is_risk']}")''')
+                        self.conn.commit()
+                        j += 1
+                elif self.save_mode_choice.get() == "sqlite":
+                    self.sqlite_cursor.execute('''CREATE TABLE if not exists hunter_search(
+                    url text, ip text, port text, web_title text, domain text, is_risk_protocol text, protocol text, base_protocol text, status_code text, component text, os text, company text, number text, country text, province text, city text, updated_at text, is_web text, as_org text, isp text, vul_list text, is_risk);''')
+                    self.sqlite_conn.commit()
+                    for each_dic in hunter_search.info_list:
+                        self.TREEVIEW.insert("", tk.END, values=(
+                            j, each_dic['ip'], str(each_dic['port']) + "/" + str(each_dic['domain']), each_dic['os'],
+                            each_dic['web_title']))
+                        self.sqlite_cursor.execute(
+                            f'''INSERT INTO hunter_search VALUES("{each_dic['url']}","{each_dic['ip']}","{each_dic['port']}","{each_dic['web_title']}","{each_dic['domain']}","{each_dic['is_risk_protocol']}","{each_dic['protocol']}","{each_dic['base_protocol']}","{each_dic['status_code']}","{each_dic['component']}","{each_dic['os']}","{each_dic['company']}","{each_dic['number']}","{each_dic['country']}","{each_dic['province']}","{each_dic['city']}","{each_dic['updated_at']}","{each_dic['is_web']}","{each_dic['as_org']}","{each_dic['isp']}","{each_dic['vul_list']}","{each_dic['is_risk']}")''')
+                        self.sqlite_conn.commit()
+                        j += 1
+            self.log_insert(
+                f'[Hunter] End of search. Totally {hunter_search.other_info["total"]} results on Hunter. Complete information has been stored by mode "{self.save_mode_choice.get()}". Consume {hunter_search.other_info["consume_quota"]} points, {hunter_search.other_info["rest_quota"]} points remaining today.\n')
 
 
 if __name__ == '__main__':

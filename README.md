@@ -33,6 +33,7 @@ ThunderSearch（闪电搜索器）是一款使用多个(目前支持Fofa、Zoome
 "fofa_api": ""
 "quake_api": ""
 "shodan_api": ""
+"hunter_api": ""
 "file": ""
 "host": ""
 "port": ""
@@ -71,6 +72,7 @@ python3 ThunderSearch.py
 ![](pic/fofa.png) 
 ![](pic/quake.png) 
 ![](pic/shodan.jpg)
+![](pic/hunter.jpg)
 ![](pic/config.jpg)  
 ![](pic/mysql.png)  
 ![](pic/csv.png)

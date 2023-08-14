@@ -33,6 +33,7 @@ ThunderSearch is an information collection tool with GUI interface developed usi
 "fofa_api": ""
 "quake_api": ""
 "shodan_api": ""
+"hunter_api": ""
 "file": ""
 "host": ""
 "port": ""
@@ -71,6 +72,7 @@ python3 ThunderSearch.py
 ![](pic/fofa.png) 
 ![](pic/quake.png) 
 ![](pic/shodan.jpg)
+![](pic/hunter.jpg)
 ![](pic/config.jpg)  
 ![](pic/mysql.png)  
 ![](pic/csv.png)
