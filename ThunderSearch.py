@@ -542,7 +542,7 @@ https://hunter.qianxin.com/"""
 
     def _save_config(self):  # 保存数据
         self.dic = {
-            'language': "ch" if self.language == "ch" else "en",
+            'language': "ch" if not os.path.exists('config.json') else self.language_choice.get(),
             'zoomeye_username': self.ZOOMEYE_USERNAME.get(),
             'zoomeye_password': self.ZOOMEYE_PASSWORD.get(),
             'zoomeye_api': self.ZOOMEYE_API.get(),
