@@ -1,5 +1,9 @@
 # 🏝 Update Log
 
+## v2.5.1
+- Added page adaptation, optimized for Windows HiDPI
+- Improve English support
+
 ## v2.5
 - Support `Hunter` search
 - Add version update detection

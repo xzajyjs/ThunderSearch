@@ -42,7 +42,7 @@ ThunderSearch is an information collection tool with GUI interface developed usi
 "password": ""
 ```
 
-> You can change language from `ch`(Chinese) to `en`(English).
+> Modify the language through the `Language` option in the interface. At the same time, the value of `language` can also be modified by modifying the language parameter. You can change language from `ch`(Chinese) to `en`(English).
 
 ### -> Build and Run
 ```
@@ -56,16 +56,7 @@ python3 ThunderSearch.py
 [For details](Intro/Statistics.md)
 
 ---
-## 💻 TODO List
-- [x] Code refactoring
-- [x] Optimized login mode
-- [x] Add web application search module
-- [x] Add multiple result export
-- [x] Support more search engines (Fofa, Shodan, Hunter, Zoomeye, Quake)
-- [ ] Sub-engine structure optimization
-- [ ] Search by date
-- [ ] support xlsx export
----
+
 ## 🏝 Update Log
 
 [For details](Intro/Update_EN.md)

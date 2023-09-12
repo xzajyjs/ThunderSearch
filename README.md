@@ -42,7 +42,7 @@ ThunderSearch（闪电搜索器）是一款使用多个(目前支持`Fofa`、`Sh
 "password": ""
 ```
 
-> 修改language的参数，可修改语言。目前支持：`ch`(中文), `en`(英文)
+> 通过界面中的`Language`选项来修改语言。同时也可通过修改`language`的值来修改语言。目前支持：`ch`(中文), `en`(英文)
 
 ### -> 构建和运行
 ```
@@ -55,16 +55,6 @@ python3 ThunderSearch.py
 
 [查看详情](Intro/Statistics.md)
 
----
-## 💻 TODO List
-- [x] 代码重构
-- [x] 优化登陆模式
-- [x] 增加web应用搜索模块
-- [x] 增加多种结果导出模式
-- [x] 支持更多搜索引擎(目前支持Fofa、Zoomeye、Quake、Shodan和Hunter)  
-- [ ] 分engine结构优化
-- [ ] 按日期搜索
-- [ ] 支持xlsx导出
 ---
 ## 🏝 更新日志
 

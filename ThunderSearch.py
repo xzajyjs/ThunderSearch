@@ -1,5 +1,7 @@
 import os
+import sys
 import json
+import ctypes
 import sqlite3
 import traceback
 
@@ -9,7 +11,7 @@ import tkinter as tk
 from os import system
 from threading import Thread
 from tkinter import messagebox
-from tkinter.ttk import Notebook, Treeview
+from tkinter.ttk import Notebook, Treeview, Style
 
 # zoomeye
 import module.zoomeye.host_search as zoomeye_hostsearch
@@ -32,7 +34,7 @@ import module.shodan.search as shodan_search
 # hunter
 import module.hunter.search as hunter_search
 
-VERSION = "v2.5"
+VERSION = "v2.5.1"
 
 
 class Application(tk.Frame):
@@ -42,8 +44,8 @@ class Application(tk.Frame):
         self.delete_access_token()
         self.createWidget()
         self.language = self.dic['language']
-        self.setLanguage(language=self.language)
-        self.pack()
+        self.setLanguage()
+        self.pack(padx=0, pady=0, fill='both', expand=True)
         self.checkUpdate()
 
     def checkUpdate(self):
@@ -63,16 +65,211 @@ class Application(tk.Frame):
     def createWidget(self):
         self.notebook = Notebook(self)
         self.search_frame = tk.Frame()
-        config_frame = tk.Frame()
-        help_frame = tk.Frame()
+        self.config_frame = tk.Frame()
+        self.help_frame = tk.Frame()
         self.notebook.add(self.search_frame, text='查询')
-        self.notebook.add(config_frame, text='配置')
-        self.notebook.add(help_frame, text='帮助')
-        self.notebook.grid(row=0, column=0, columnspan=20)
+        self.notebook.add(self.config_frame, text='配置')
+        self.notebook.add(self.help_frame, text='帮助')
+        self.notebook.pack(padx=0, pady=0, fill='both', expand=True)
 
-        # help_frame
-        help_text = tk.Text(help_frame, relief=tk.SOLID, borderwidth=1, height=35, width=100, fg='gray')
-        help_text.grid(row=0, column=0)
+        self.initHelpFrame()
+        self.initConfigFrame()
+        self.initSearchFrame()
+
+    def initSearchFrame(self):
+        self.label_thread = tk.Label(self.search_frame, text='线程数:', width=6)
+        self.label_thread.grid(row=0, column=0)
+        self.thread_choice = tk.StringVar(self)
+        self.thread_choice.set('5')
+        self.THREAD = tk.OptionMenu(self.search_frame, self.thread_choice, '1', '5', '10', '20', '30')
+        self.THREAD.grid(row=0, column=1)
+        self.label_page = tk.Label(self.search_frame, text='查询页数:')
+        self.label_page.grid(row=0, column=2)
+        self.page_choice = tk.StringVar(self)
+        self.page_choice.set('1')
+        self.PAGE = tk.OptionMenu(self.search_frame, self.page_choice, '1', '2', '3', '4', '5', '10', '15', '20', '30',
+                                  '50', '80', '100', '200', '300', '500', '1000')
+        self.PAGE.grid(row=0, column=3)
+        self.label_mode = tk.Label(self.search_frame, text='模式:')
+        self.label_mode.grid(row=0, column=4)
+
+        self.mode_dict = {
+            'Fofa': ['数据查询', '个人信息'],
+            'Shodan': ['数据搜索'],
+            'Hunter': ['数据搜索'],
+            'Zoomeye': ['主机搜索', '域名/IP', 'web应用', '个人信息'],
+            'Quake': ['主机搜索', '服务搜索', '个人信息']
+        }
+
+        self.query_mode_choice = tk.StringVar(self)
+        self.MODE = tk.OptionMenu(self.search_frame, self.query_mode_choice, '')
+        self.MODE.grid(row=0, column=5)
+
+        self.search_engine_choice = tk.StringVar(self)
+        self.search_engine_choice.trace('w', self.update_mode_menu)
+        self.search_engine_choice.set('Fofa')
+
+        self.label_saveMode = tk.Label(self.search_frame, text='存储模式:')
+        self.label_saveMode.grid(row=0, column=6)
+        self.save_mode_choice = tk.StringVar(self)
+        self.save_mode_choice.set('不保存')
+        self.SAVE_MODE = tk.OptionMenu(self.search_frame, self.save_mode_choice, '不保存', '存文件', 'mysql', 'sqlite')
+        self.SAVE_MODE.grid(row=0, column=7)
+
+        self.label_searchEngine = tk.Label(self.search_frame, text='搜索引擎:')
+        self.label_searchEngine.grid(row=0, column=8)
+        self.SEARCH_ENGINE = tk.OptionMenu(self.search_frame, self.search_engine_choice, *self.mode_dict.keys())
+        self.SEARCH_ENGINE.grid(row=0, column=9)
+
+        self.label_searchQuery = tk.Label(self.search_frame, text='查询语句:')
+        self.label_searchQuery.grid(row=1, column=0)
+        self.QUERY = tk.Entry(self.search_frame, width=60, borderwidth=1)
+        self.QUERY.grid(row=1, column=1, columnspan=8, sticky=tk.EW)
+        self.START = tk.Button(self.search_frame, text='查询', command=self.thread)
+        self.START.grid(row=1, column=9)
+
+        # windows hidpi treeview row_height
+        multiple = 1 if "darwin" in sys.platform else 2
+        if multiple == 2:
+            Style().configure('Treeview', rowheight=40)
+        self.TREEVIEW = Treeview(self.search_frame, show='headings')
+        self.TREEVIEW.grid(row=3, column=0, columnspan=10, sticky=tk.NSEW)
+        self.TREEVIEW['columns'] = ("ID", "IP", "PORT/DOMAIN", "OS", "TITLE")
+        self.TREEVIEW.column("ID", width=50)
+        self.TREEVIEW.column("IP", width=160)
+        self.TREEVIEW.column("PORT/DOMAIN", width=235)
+        self.TREEVIEW.column("OS", width=90)
+        self.TREEVIEW.column("TITLE", width=200)
+        self.TREEVIEW.heading("ID", text="ID")
+        self.TREEVIEW.heading("IP", text="IP")
+        self.TREEVIEW.heading("PORT/DOMAIN", text="PORT/DOMAIN")
+        self.TREEVIEW.heading("OS", text="OS")
+        self.TREEVIEW.heading("TITLE", text="TITLE")
+        self.LOG = tk.Text(self.search_frame, relief=tk.SOLID, borderwidth=1, height=15, width=104, fg='gray')
+        self.LOG.grid(row=4, column=0, columnspan=10, sticky=tk.EW)
+
+        # 信息处理
+        self.log_insert(
+            f"@ Version: {VERSION}\n@ Author: xzajyjs\n@ E-mail: xuziang16@gmail.com\n@ Repo: https://github.com/xzajyjs/ThunderSearch\n")
+        if not os.path.exists('config.json'):
+            self.language = "ch"
+            self.save_config()
+        try:
+            self.load_config()
+        except Exception as e:
+            messagebox.showerror(title='Error', message=f'Fail to load config.json, {e}')
+
+        # 页面自适应
+        for i in range(4):
+            self.search_frame.rowconfigure(i + 1, weight=1)
+        for j in range(9):
+            self.search_frame.columnconfigure(j + 1, weight=1)
+
+    def initConfigFrame(self):
+        # zoomeye
+        tk.Label(self.config_frame, text='Zoomeye', width=10).grid(row=0, column=1, sticky=tk.EW)
+        self.label_zoomeyeUser = tk.Label(self.config_frame, text='账号:')
+        self.label_zoomeyeUser.grid(row=1, column=0)
+        self.label_zoomeyePass = tk.Label(self.config_frame, text='密码:')
+        self.label_zoomeyePass.grid(row=2, column=0)
+        tk.Label(self.config_frame, text='API-KEY:').grid(row=3, column=0)
+        self.ZOOMEYE_USERNAME = tk.Entry(self.config_frame, width=24, borderwidth=1)
+        self.ZOOMEYE_USERNAME.grid(row=1, column=1, sticky=tk.EW)
+        self.ZOOMEYE_PASSWORD = tk.Entry(self.config_frame, width=24, show="*", borderwidth=1)
+        self.ZOOMEYE_PASSWORD.grid(row=2, column=1, sticky=tk.EW)
+        self.ZOOMEYE_API = tk.Entry(self.config_frame, width=24, borderwidth=1, show='*')
+        self.ZOOMEYE_API.grid(row=3, column=1, sticky=tk.EW)
+
+        # fofa
+        tk.Label(self.config_frame, text='Fofa', width=10).grid(row=4, column=1, sticky=tk.EW)
+        self.label_fofaEmail = tk.Label(self.config_frame, text='邮箱:')
+        self.label_fofaEmail.grid(row=5, column=0)
+        tk.Label(self.config_frame, text='API-KEY:').grid(row=6, column=0)
+        self.FOFA_USERNAME = tk.Entry(self.config_frame, width=24, borderwidth=1)
+        self.FOFA_USERNAME.grid(row=5, column=1, sticky=tk.EW)
+        self.FOFA_API = tk.Entry(self.config_frame, width=24, borderwidth=1, show='*')
+        self.FOFA_API.grid(row=6, column=1, sticky=tk.EW)
+
+        # quake
+        tk.Label(self.config_frame, text="360Quake").grid(row=7, column=1, sticky=tk.EW)
+        tk.Label(self.config_frame, text="API-KEY").grid(row=8, column=0)
+        self.QUAKE_API = tk.Entry(self.config_frame, width=24, show="*", borderwidth=1)
+        self.QUAKE_API.grid(row=8, column=1, sticky=tk.EW)
+
+        # shodan
+        tk.Label(self.config_frame, text="Shodan").grid(row=9, column=1, sticky=tk.EW)
+        tk.Label(self.config_frame, text="API-KEY").grid(row=10, column=0)
+        self.SHODAN_API = tk.Entry(self.config_frame, width=24, show="*", borderwidth=1)
+        self.SHODAN_API.grid(row=10, column=1, sticky=tk.EW)
+
+        # hunter
+        tk.Label(self.config_frame, text="Hunter").grid(row=11, column=1, sticky=tk.EW)
+        tk.Label(self.config_frame, text="API-KEY").grid(row=12, column=0)
+        self.HUNTER_API = tk.Entry(self.config_frame, width=24, show="*", borderwidth=1)
+        self.HUNTER_API.grid(row=12, column=1, sticky=tk.EW)
+
+        # 右侧配置
+        self.label_fileConfig = tk.Label(self.config_frame, text='文件存储配置')
+        self.label_fileConfig.grid(row=0, column=3, sticky=tk.EW)
+        self.label_filePath = tk.Label(self.config_frame, text='文件路径')
+        self.label_filePath.grid(row=1, column=2)
+        self.label_dbConfig = tk.Label(self.config_frame, text='数据库配置(MySQL)')
+        self.label_dbConfig.grid(row=2, column=3, sticky=tk.EW)
+        self.label_dbHost = tk.Label(self.config_frame, text='主机')
+        self.label_dbHost.grid(row=3, column=2)
+        self.label_dbPort = tk.Label(self.config_frame, text='端口')
+        self.label_dbPort.grid(row=4, column=2)
+        self.label_dbName = tk.Label(self.config_frame, text='数据库名')
+        self.label_dbName.grid(row=5, column=2)
+        self.label_dbUser = tk.Label(self.config_frame, text='用户名')
+        self.label_dbUser.grid(row=6, column=2)
+        self.label_dbPass = tk.Label(self.config_frame, text='密码')
+        self.label_dbPass.grid(row=7, column=2)
+        self.label_sqliteConfig = tk.Label(self.config_frame, text='Sqlite配置')
+        self.label_sqliteConfig.grid(row=8, column=3, sticky=tk.EW)
+        self.label_sqlite = tk.Label(self.config_frame, text='Sqlite路径')
+        self.label_sqlite.grid(row=9, column=2)
+        self.label_otherConfig = tk.Label(self.config_frame, text='其他配置')
+        self.label_otherConfig.grid(row=10, column=3, sticky=tk.EW)
+        self.label_languageSet = tk.Label(self.config_frame, text='Language')
+        self.label_languageSet.grid(row=11, column=2)
+
+        self.FILE = tk.Entry(self.config_frame, width=30, borderwidth=1)
+        self.FILE.grid(row=1, column=3, sticky=tk.EW)
+        self.DATABASE_HOST = tk.Entry(self.config_frame, width=30, borderwidth=1)
+        self.DATABASE_HOST.grid(row=3, column=3, sticky=tk.EW)
+        self.DATABASE_PORT = tk.Entry(self.config_frame, width=30, borderwidth=1)
+        self.DATABASE_PORT.grid(row=4, column=3, sticky=tk.EW)
+        self.DATABASE_DATABASE = tk.Entry(self.config_frame, width=30, borderwidth=1)
+        self.DATABASE_DATABASE.grid(row=5, column=3, sticky=tk.EW)
+        self.DATABASE_USERNAME = tk.Entry(self.config_frame, width=30, borderwidth=1)
+        self.DATABASE_USERNAME.grid(row=6, column=3, sticky=tk.EW)
+        self.DATABASE_PASSWORD = tk.Entry(self.config_frame, width=30, borderwidth=1, show="*")
+        self.DATABASE_PASSWORD.grid(row=7, column=3, sticky=tk.EW)
+        self.SQLITE_FILENAME = tk.Entry(self.config_frame, width=30, borderwidth=1)
+        self.SQLITE_FILENAME.grid(row=9, column=3, sticky=tk.EW)
+        self.language_choice = tk.StringVar()
+        # self.language_choice.set(self.dic['language'])
+        self.LANGUAGE_BTN = tk.OptionMenu(self.config_frame, self.language_choice, 'ch', 'en')
+        self.LANGUAGE_BTN.grid(row=11, column=3, sticky=tk.W)
+
+        self.SAVE = tk.Button(self.config_frame, text='保存配置', command=self.save_config)
+        self.SAVE.grid(row=3, column=4)
+        self.LOAD = tk.Button(self.config_frame, text='读取配置', command=self.load_config)
+        self.LOAD.grid(row=4, column=4)
+        self.CLEAR = tk.Button(self.config_frame, text='清空配置', command=self.clear_config)
+        self.CLEAR.grid(row=5, column=4)
+        self.TESTDB = tk.Button(self.config_frame, text='数据库测试', command=self.db_test)
+        self.TESTDB.grid(row=6, column=4)
+        self.CLEARTOKEN = tk.Button(self.config_frame, text='清除token', command=self.delete_access_token)
+        self.CLEARTOKEN.grid(row=7, column=4)
+
+        self.config_frame.columnconfigure(1, weight=1)
+        self.config_frame.columnconfigure(3, weight=1)
+
+    def initHelpFrame(self):
+        self.help_text = tk.Text(self.help_frame, relief=tk.SOLID, borderwidth=1, height=35, width=100, fg='gray')
+        self.help_text.grid(row=0, column=0, sticky=tk.NSEW)
         text = """使用指南:
 1.先填写配置选项卡中的选项(有选择性填写)
 2.填写完配置请先点击保存
@@ -157,182 +354,11 @@ https://www.shodan.io/search/examples
 Hunter语法
 例如：domain.suffix="'qianxin.com" && title="北京"
 https://hunter.qianxin.com/"""
-        help_text.insert(tk.END, text)
+        self.help_text.insert(tk.END, text)
+        self.help_frame.rowconfigure(0, weight=1)
+        self.help_frame.columnconfigure(0, weight=1)
 
-        # config_frame
-
-        # zoomeye
-        tk.Label(config_frame, text='Zoomeye', width=10).grid(row=0, column=0, columnspan=2)
-        self.label_zoomeyeUser = tk.Label(config_frame, text='账号:')
-        self.label_zoomeyeUser.grid(row=1, column=0)
-        self.label_zoomeyePass = tk.Label(config_frame, text='密码:')
-        self.label_zoomeyePass.grid(row=2, column=0)
-        tk.Label(config_frame, text='API-KEY:').grid(row=3, column=0)
-        self.ZOOMEYE_USERNAME = tk.Entry(config_frame, width=24, borderwidth=1)
-        self.ZOOMEYE_USERNAME.grid(row=1, column=1)
-        self.ZOOMEYE_PASSWORD = tk.Entry(config_frame, width=24, show="*", borderwidth=1)
-        self.ZOOMEYE_PASSWORD.grid(row=2, column=1)
-        self.ZOOMEYE_API = tk.Entry(config_frame, width=24, borderwidth=1, show='*')
-        self.ZOOMEYE_API.grid(row=3, column=1)
-
-        # fofa
-        tk.Label(config_frame, text='Fofa', width=10).grid(row=4, column=0, columnspan=2)
-        self.label_fofaEmail = tk.Label(config_frame, text='邮箱:')
-        self.label_fofaEmail.grid(row=5, column=0)
-        tk.Label(config_frame, text='API-KEY:').grid(row=6, column=0)
-        self.FOFA_USERNAME = tk.Entry(config_frame, width=24, borderwidth=1)
-        self.FOFA_USERNAME.grid(row=5, column=1)
-        self.FOFA_API = tk.Entry(config_frame, width=24, borderwidth=1, show='*')
-        self.FOFA_API.grid(row=6, column=1)
-
-        # blank
-        # tk.Label(config_frame, text="").grid(row=7, column=0, columnspan=2)
-
-        # quake
-        tk.Label(config_frame, text="360Quake").grid(row=7, column=0, columnspan=2)
-        tk.Label(config_frame, text="API-KEY").grid(row=8, column=0)
-        self.QUAKE_API = tk.Entry(config_frame, width=24, show="*", borderwidth=1)
-        self.QUAKE_API.grid(row=8, column=1)
-
-        # shodan
-        tk.Label(config_frame, text="Shodan").grid(row=9, column=0, columnspan=2)
-        tk.Label(config_frame, text="API-KEY").grid(row=10, column=0)
-        self.SHODAN_API = tk.Entry(config_frame, width=24, show="*", borderwidth=1)
-        self.SHODAN_API.grid(row=10, column=1)
-
-        # hunter
-        tk.Label(config_frame, text="Hunter").grid(row=11, column=0, columnspan=2)
-        tk.Label(config_frame, text="API-KEY").grid(row=12, column=0)
-        self.HUNTER_API = tk.Entry(config_frame, width=24, show="*", borderwidth=1)
-        self.HUNTER_API.grid(row=12, column=1)
-
-        # 右侧配置
-        self.label_otherConfig = tk.Label(config_frame, text='其他配置')
-        self.label_otherConfig.grid(row=0, column=2, columnspan=2)
-        self.label_filePath = tk.Label(config_frame, text='文件路径')
-        self.label_filePath.grid(row=1, column=2)
-        self.label_dbConfig = tk.Label(config_frame, text='数据库配置(MySQL)')
-        self.label_dbConfig.grid(row=2, column=2, columnspan=2)
-        self.label_dbHost = tk.Label(config_frame, text='主机')
-        self.label_dbHost.grid(row=3, column=2)
-        self.label_dbPort = tk.Label(config_frame, text='端口')
-        self.label_dbPort.grid(row=4, column=2)
-        self.label_dbName = tk.Label(config_frame, text='数据库名')
-        self.label_dbName.grid(row=5, column=2)
-        self.label_dbUser = tk.Label(config_frame, text='用户名')
-        self.label_dbUser.grid(row=6, column=2)
-        self.label_dbPass = tk.Label(config_frame, text='密码')
-        self.label_dbPass.grid(row=7, column=2)
-        self.label_sqliteConfig = tk.Label(config_frame, text='Sqlite配置')
-        self.label_sqliteConfig.grid(row=8, column=2, columnspan=2)
-        self.label_sqlite = tk.Label(config_frame, text='Sqlite路径')
-        self.label_sqlite.grid(row=9, column=2)
-        self.FILE = tk.Entry(config_frame, width=30, borderwidth=1)
-        self.FILE.grid(row=1, column=3)
-        self.DATABASE_HOST = tk.Entry(config_frame, width=30, borderwidth=1)
-        self.DATABASE_HOST.grid(row=3, column=3)
-        self.DATABASE_PORT = tk.Entry(config_frame, width=30, borderwidth=1)
-        self.DATABASE_PORT.grid(row=4, column=3)
-        self.DATABASE_DATABASE = tk.Entry(config_frame, width=30, borderwidth=1)
-        self.DATABASE_DATABASE.grid(row=5, column=3)
-        self.DATABASE_USERNAME = tk.Entry(config_frame, width=30, borderwidth=1)
-        self.DATABASE_USERNAME.grid(row=6, column=3)
-        self.DATABASE_PASSWORD = tk.Entry(config_frame, width=30, borderwidth=1, show="*")
-        self.DATABASE_PASSWORD.grid(row=7, column=3)
-        self.SQLITE_FILENAME = tk.Entry(config_frame, width=30, borderwidth=1)
-        self.SQLITE_FILENAME.grid(row=9, column=3)
-
-        self.SAVE = tk.Button(config_frame, text='保存配置', command=self.save_config)
-        self.SAVE.grid(row=3, column=4)
-        self.LOAD = tk.Button(config_frame, text='读取配置', command=self.load_config)
-        self.LOAD.grid(row=4, column=4)
-        self.CLEAR = tk.Button(config_frame, text='清空配置', command=self.clear_config)
-        self.CLEAR.grid(row=5, column=4)
-        self.TESTDB = tk.Button(config_frame, text='数据库测试', command=self.db_test)
-        self.TESTDB.grid(row=6, column=4)
-        self.CLEARTOKEN = tk.Button(config_frame, text='清除token', command=self.delete_access_token)
-        self.CLEARTOKEN.grid(row=7, column=4)
-
-        # self.search_frame
-        self.label_thread = tk.Label(self.search_frame, text='线程数:', width=6)
-        self.label_thread.grid(row=0, column=0)
-        self.thread_choice = tk.StringVar(self)
-        self.thread_choice.set('5')
-        self.THREAD = tk.OptionMenu(self.search_frame, self.thread_choice, '1', '5', '10', '20', '30')
-        self.THREAD.grid(row=0, column=1)
-        self.label_page = tk.Label(self.search_frame, text='查询页数:')
-        self.label_page.grid(row=0, column=2)
-        self.page_choice = tk.StringVar(self)
-        self.page_choice.set('1')
-        self.PAGE = tk.OptionMenu(self.search_frame, self.page_choice, '1', '2', '3', '4', '5', '10', '15', '20', '30',
-                                  '50', '80', '100', '200', '300', '500', '1000')
-        self.PAGE.grid(row=0, column=3)
-        self.label_mode = tk.Label(self.search_frame, text='模式:')
-        self.label_mode.grid(row=0, column=4)
-
-        self.mode_dict = {
-            'Fofa': ['数据查询', '个人信息'],
-            'Shodan': ['数据搜索'],
-            'Hunter': ['数据搜索'],
-            'Zoomeye': ['主机搜索', '域名/IP', 'web应用', '个人信息'],
-            'Quake': ['主机搜索', '服务搜索', '个人信息']
-        }
-
-        self.query_mode_choice = tk.StringVar(self)
-        self.MODE = tk.OptionMenu(self.search_frame, self.query_mode_choice, '')
-        self.MODE.grid(row=0, column=5)
-
-        self.search_engine_choice = tk.StringVar(self)
-        self.search_engine_choice.trace('w', self.update_mode_menu)
-        self.search_engine_choice.set('Fofa')
-
-        self.label_saveMode = tk.Label(self.search_frame, text='存储模式:')
-        self.label_saveMode.grid(row=0, column=6)
-        self.save_mode_choice = tk.StringVar(self)
-        self.save_mode_choice.set('不保存')
-        self.SAVE_MODE = tk.OptionMenu(self.search_frame, self.save_mode_choice, '不保存', '存文件', 'mysql', 'sqlite')
-        self.SAVE_MODE.grid(row=0, column=7)
-
-        self.label_searchEngine = tk.Label(self.search_frame, text='搜索引擎:')
-        self.label_searchEngine.grid(row=0, column=8)
-        self.SEARCH_ENGINE = tk.OptionMenu(self.search_frame, self.search_engine_choice, *self.mode_dict.keys())
-        self.SEARCH_ENGINE.grid(row=0, column=9)
-
-        self.label_searchQuery = tk.Label(self.search_frame, text='查询语句:')
-        self.label_searchQuery.grid(row=1, column=0)
-        self.QUERY = tk.Entry(self.search_frame, width=60, borderwidth=1)
-        self.QUERY.grid(row=1, column=1, columnspan=8)
-        self.START = tk.Button(self.search_frame, text='查询', command=self.thread)
-        self.START.grid(row=1, column=9)
-
-        self.TREEVIEW = Treeview(self.search_frame, show='headings')
-        self.TREEVIEW.grid(row=3, column=0, columnspan=10)
-        self.TREEVIEW['columns'] = ("ID", "IP", "PORT/DOMAIN", "OS", "TITLE")
-        self.TREEVIEW.column("ID", width=50)
-        self.TREEVIEW.column("IP", width=160)
-        self.TREEVIEW.column("PORT/DOMAIN", width=235)
-        self.TREEVIEW.column("OS", width=90)
-        self.TREEVIEW.column("TITLE", width=200)
-        self.TREEVIEW.heading("ID", text="ID")
-        self.TREEVIEW.heading("IP", text="IP")
-        self.TREEVIEW.heading("PORT/DOMAIN", text="PORT/DOMAIN")
-        self.TREEVIEW.heading("OS", text="OS")
-        self.TREEVIEW.heading("TITLE", text="TITLE")
-        self.LOG = tk.Text(self.search_frame, relief=tk.SOLID, borderwidth=1, height=15, width=104, fg='gray')
-        self.LOG.grid(row=4, column=0, columnspan=10)
-
-        # 信息处理
-        self.log_insert(
-            f"@Version: {VERSION}\n@Author: xzajyjs\n@E-mail: xuziang16@gmail.com\n@Repo: https://github.com/xzajyjs/ThunderSearch\n")
-        if not os.path.exists('config.json'):
-            self.language = "ch"
-            self.save_config()
-        try:
-            self.load_config()
-        except Exception as e:
-            messagebox.showerror(title='Error', message=f'配置文件读取错误, {e}')
-
-    def setLanguage(self, language='ch'):
+    def setLanguage(self):
         if self.language == "en":
             # tab
             self.notebook.tab(0, text='Search')
@@ -347,12 +373,24 @@ https://hunter.qianxin.com/"""
             self.label_searchEngine['text'] = "SearchEngine"
             self.label_searchQuery['text'] = "Query"
             self.START.configure(text='Search')
+            self.mode_dict = {
+                'Fofa': ['Data', 'Account'],
+                'Shodan': ['Data'],
+                'Hunter': ['Data'],
+                'Zoomeye': ['HostSearch', 'Domain/IP', 'WebApp', 'Account'],
+                'Quake': ['HostSearch', 'Service', 'Account']
+            }
+            self.update_mode_menu()
+            self.save_mode_choice.set('NotSave')
+            self.SAVE_MODE = tk.OptionMenu(self.search_frame, self.save_mode_choice, 'NotSave', 'File', 'mysql',
+                                           'sqlite')
+            self.SAVE_MODE.grid(row=0, column=7)
 
             # config_tab
             self.label_zoomeyeUser['text'] = "Account"
             self.label_zoomeyePass['text'] = "Password"
             self.label_fofaEmail['text'] = "E-mail"
-            self.label_otherConfig['text'] = "Other"
+            self.label_fileConfig['text'] = "Save File Config"
             self.label_filePath['text'] = "FilePath"
             self.label_dbConfig['text'] = "DB Config(MySQL)"
             self.label_dbHost['text'] = "Host"
@@ -362,43 +400,103 @@ https://hunter.qianxin.com/"""
             self.label_dbPass['text'] = "Pass"
             self.label_sqliteConfig['text'] = "SqliteConfig"
             self.label_sqlite['text'] = "SqlitePath"
+            self.label_otherConfig['text'] = "OtherConfig"
             self.SAVE.configure(text='SaveConfig')
             self.LOAD.configure(text='LoadConfig')
             self.CLEAR.configure(text='ClearConfig')
             self.TESTDB.configure(text='TestDB')
             self.CLEARTOKEN.configure(text='ClearToken')
+            self.language_choice.set('en')
+
+            self.help_text.delete("1.0", "end")
+            text_en = """Guidance:
+1. First fill in the options in the configuration tab (fill in optional)
+2. After filling in the configuration, please click Save first.
+3. Please fill in the absolute path for the file path, such as /Users/xxx/fofa.csv
+4. The number of query pages multiplied by 10 under Fofa and Quake queries is the number of query data items.
+5.Shodan single page search is 100 items
+6.Hunter single page search is 20 items
+=============
+
+Fofa syntax
+title="beijing" Search "Beijing" from the title
+header="elastic" Search for "elastic" from the http header
+body="Cyberspace Surveying and Mapping" Search for "Cyberspace Surveying and Mapping" from the HTML text
+domain="qq.com" searches for websites with the root domain name qq.com.
+icon_hash="-247388890" Search for assets using this icon. Only available to FOFA premium members
+host=".gov.cn" Search for ".gov.cn" from the url. Use host as the name for the search.
+port="6379" Find assets corresponding to the "6379" port
+icp="Beijing ICP Certificate No. 030173" Find the website with the registration number "Beijing ICP Certificate No. 030173" Search website type assets
+ip="1.1.1.1" Search for websites containing "1.1.1.1" from ip. Use ip as the name when searching.
+ip="220.181.111.1/24" Query the C network segment assets whose IP is "220.181.111.1"
+status_code="402" Query the assets with server status "402"
+protocol="quic" Query quic protocol assets and search for the specified protocol type (valid when port scanning is enabled)
+country="CN" searches for assets in the specified country (code).
+region="HeNan" searches for assets in the specified administrative region.
+city="HanDan" searches for assets in the specified city.
+cert="baidu" searches for assets with baidu in the certificate (https or imaps, etc.).
+cert.subject="Oracle Corporation" Searches for certificate holders that are assets of Oracle Corporation
+cert.issuer="DigiCert" searches for assets whose certificate issuer is DigiCert Inc.
+cert.is_valid=true Verifies whether the certificate is valid, true is valid, false is invalid, only available to FOFA senior members
+banner=users && protocol=ftp searches for assets with users text in the FTP protocol.
+type=service searches all protocol assets, supporting both subdomain and service.
+os="centos" searches operating systems for CentOS assets.
+server=="Microsoft-IIS/10" searches for IIS 10 servers.
+app="Microsoft-Exchange" Search for Microsoft-Exchange devices
+after="2017" && before="2017-10-01" time range search
+asn="19551" searches for assets with the specified asn.
+org="Amazon.com, Inc." searches for assets of the specified org (organization).
+base_protocol="udp" searches for assets with the specified udp protocol.
+is_fraud=false excludes counterfeit/fraudulent data
+is_honeypot=false excludes honeypot data, only available to FOFA premium members
+is_ipv6=true searches for ipv6 assets and only accepts true and false.
+is_domain=true searches domain name assets, only accepts true and false.
+port_size="6" Query the assets with the number of open ports equal to "6", only available to FOFA members
+port_size_gt="6" Query assets with open ports greater than "6", only available to FOFA members
+port_size_lt="12" Query assets with open ports less than "12", only available to FOFA members
+ip_ports="80,161" searches for ip assets that open ports 80 and 161 at the same time (asset data in ip units)
+ip_country="CN" searches for China's IP assets (asset data in IP units).
+ip_region="Zhejiang" searches for ip assets in the specified administrative region (asset data in ip units).
+ip_city="Hangzhou" searches for ip assets in the specified city (asset data in ip units).
+ip_after="2021-03-18" searches for ip assets after 2021-03-18 (asset data in ip units).
+ip_before="2019-09-09" searches for ip assets before 2019-09-09 (asset data in ip units).
+============
+
+Zoomeye syntax
+app:nginx　Component name
+ver:1.0　Version
+os:windows Operating system
+country:"China" Country
+city:"hangzhou" City
+port:80　Port
+hostname:google　 Hostname
+site:thief.one　 Website domain name
+desc:nmask　 Description
+keywords:nmask'blog　 Keywords
+service:ftp　 Service type
+ip:8.8.8.8　 ip address
+cidr:8.8.8.8/24　 IP address segment
+city:"beijing" port:80 satisfies two conditions at the same time
+============
+
+Quake syntax
+https://quake.360.cn/quake/#/help?id=5eb238f110d2e850d5c6aec8&title=%E6%A3%80%E7%B4%A2%E5%85%B3%E9%94%AE%E8%AF%8D
+============
+
+Shodan syntax
+For example: product: "nginx" city: "Beijing" port: "8088"
+https://www.shodan.io/search/filters
+https://www.shodan.io/search/examples
+============
+
+
+Hunter Grammar
+For example: domain.suffix="'qianxin.com" && title="Beijing"
+https://hunter.qianxin.com/"""
+            self.help_text.insert(tk.END, text_en)
 
         elif self.language == "ch":
-            self.notebook.tab(0, text='查询')
-            self.notebook.tab(1, text='配置')
-            self.notebook.tab(2, text='帮助')
-
-            self.label_thread['text'] = "线程数"
-            self.label_mode['text'] = "模式"
-            self.label_page['text'] = "查询页数"
-            self.label_saveMode['text'] = "存储模式"
-            self.label_searchEngine['text'] = "搜索引擎"
-            self.label_searchQuery['text'] = "查询语句"
-            self.START.configure(text='查询')
-
-            self.label_zoomeyeUser['text'] = "账号"
-            self.label_zoomeyePass['text'] = "密码"
-            self.label_fofaEmail['text'] = "邮箱"
-            self.label_otherConfig['text'] = "其他配置"
-            self.label_filePath['text'] = "文件路径"
-            self.label_dbConfig['text'] = "数据库配置(MySQL)"
-            self.label_dbHost['text'] = "主机"
-            self.label_dbPort['text'] = "端口"
-            self.label_dbName['text'] = "数据库名"
-            self.label_dbUser['text'] = "用户名"
-            self.label_dbPass['text'] = "密码"
-            self.label_sqliteConfig['text'] = "Sqlite配置"
-            self.label_sqlite['text'] = "Sqlite路径"
-            self.SAVE.configure(text='保存配置')
-            self.LOAD.configure(text='读取配置')
-            self.CLEAR.configure(text='清空配置')
-            self.TESTDB.configure(text='测试数据库')
-            self.CLEARTOKEN.configure(text='清除token')
+            self.language_choice.set('ch')
 
     def update_mode_menu(self, *args):
         modes = self.mode_dict[self.search_engine_choice.get()]
@@ -444,7 +542,7 @@ https://hunter.qianxin.com/"""
 
     def _save_config(self):  # 保存数据
         self.dic = {
-            'language': self.language,
+            'language': "ch" if self.language == "ch" else "en",
             'zoomeye_username': self.ZOOMEYE_USERNAME.get(),
             'zoomeye_password': self.ZOOMEYE_PASSWORD.get(),
             'zoomeye_api': self.ZOOMEYE_API.get(),
@@ -474,9 +572,9 @@ https://hunter.qianxin.com/"""
         try:
             self._save_config()
         except Exception as e:
-            messagebox.showerror('Error', f'保存失败。错误信息:{traceback.format_exc()}')
+            messagebox.showerror('Error', f'Fail to save。Info:{traceback.format_exc()}')
         else:
-            messagebox.showinfo('Success', '保存成功')
+            messagebox.showinfo('Success', 'Success to save.\nIf you change Language, please restart the program.')
 
     def clear_config(self):
         self._delete_config()
@@ -485,7 +583,7 @@ https://hunter.qianxin.com/"""
         except Exception as e:
             messagebox.showerror("Error", traceback.format_exc())
         else:
-            messagebox.showinfo("Success", "清空成功")
+            messagebox.showinfo("Success", "Success to clear.")
 
     def db_test(self):
         # mysql
@@ -574,7 +672,7 @@ https://hunter.qianxin.com/"""
                 f"[+] Access_Token: {self.zoomeye_headers['Authorization'][:7] + '*' * 10 + self.zoomeye_headers['Authorization'][-3:]}\n")
 
     def thread(self):
-        if self.query_mode_choice.get() == "个人信息" or self.QUERY.get() != "":
+        if self.query_mode_choice.get() in ["个人信息", "Account"] or self.QUERY.get() != "":
             if self.save_mode_choice.get() == "mysql":
                 try:
                     self.conn = pymysql.connect(database=self.dic['database'], host=self.dic['host'],
@@ -586,7 +684,7 @@ https://hunter.qianxin.com/"""
                 else:
                     self.log_insert('[+] 数据库连接成功\n')
                     self.cursor = self.conn.cursor()
-            elif self.save_mode_choice.get() == "存文件" and self.FILE.get() == "":
+            elif self.save_mode_choice.get() in ["存文件", "File"] and self.FILE.get() == "":
                 messagebox.showerror(title='Error', message='[!] 文件名为空!')
                 return
             t = Thread(target=self.run, daemon=True)
@@ -599,20 +697,20 @@ https://hunter.qianxin.com/"""
             try:
                 self.sqlite_conn = sqlite3.connect(self.dic['sqlitepath'])
             except Exception as e:
-                messagebox.showerror(title='Error', message=f'[!] 数据库连接失败! {e}')
+                messagebox.showerror(title='Error', message=f'[!] Fail to connect to sqlite! {e}')
                 return
             else:
-                self.log_insert('[+] 数据库连接成功\n')
+                self.log_insert('[+] Success to connect to sqlite\n')
                 self.sqlite_cursor = self.sqlite_conn.cursor()
         # zoomeye
         if self.search_engine_choice.get() == "Zoomeye":
             self.log_insert('[Zoomeye] Start searching...\n')
-            if self.query_mode_choice.get() != '个人信息':
+            if self.query_mode_choice.get() not in ['个人信息', 'Account']:
                 self.delete_tree(self.TREEVIEW)
             self.login()
             query = self.QUERY.get().replace(" ", '%20')
 
-            if self.query_mode_choice.get() == '主机搜索':
+            if self.query_mode_choice.get() in ['主机搜索', 'HostSearch']:
                 zoomeye_hostsearch.headers = self.zoomeye_headers
                 error_info = zoomeye_hostsearch.host_search(query=query, page=self.page_choice.get(),
                                                             thread=int(self.thread_choice.get()))
@@ -642,7 +740,7 @@ https://hunter.qianxin.com/"""
                             f'''INSERT INTO zoomeye_host_search VALUES("{each_dic["ip"]}","{each_dic["port"]}","{each_dic["os"]}","{each_dic["app"]}","{each_dic["version"]}","{each_dic["title"]}","{each_dic["city"]}","{each_dic["country"]}","{each_dic["continents"]}")''')
                         self.sqlite_conn.commit()
                         j += 1
-                elif self.save_mode_choice.get() == "存文件":
+                elif self.save_mode_choice.get() in ["存文件", "File"]:
                     with open(self.FILE.get(), "w", encoding="utf-8") as f:
                         f.write("ip,port,os,app,version,title,city,country,continents\n")
                         for each_dic in zoomeye_hostsearch.info_list:
@@ -651,13 +749,13 @@ https://hunter.qianxin.com/"""
                             f.write(
                                 f'''{each_dic["ip"]},{each_dic["port"]},{each_dic["os"]},{each_dic["app"]},{each_dic["version"]},{each_dic["title"]},{each_dic["city"]},{each_dic["country"]},{each_dic["continents"]}\n''')
                             j += 1
-                elif self.save_mode_choice.get() == "不保存":
+                elif self.save_mode_choice.get() in ["不保存", "NotSave"]:
                     for each_dic in zoomeye_hostsearch.info_list:
                         self.TREEVIEW.insert("", tk.END, values=(
                             j, each_dic['ip'], each_dic['port'], each_dic['os'], each_dic['title']))
                         j += 1
 
-            if self.query_mode_choice.get() == '域名/IP':
+            if self.query_mode_choice.get() in ['域名/IP', 'Domain/IP']:
                 zoomeye_domain_ip.headers = self.zoomeye_headers
                 error_info = zoomeye_domain_ip.domain_ip(query=query, page=self.page_choice.get(),
                                                          thread=int(self.thread_choice.get()))
@@ -685,19 +783,19 @@ https://hunter.qianxin.com/"""
                             f'''INSERT INTO zoomeye_domain_ip VALUES("{each_dic['ip']}","{each_dic['name']}")''')
                         self.sqlite_conn.commit()
                         j += 1
-                elif self.save_mode_choice.get() == "存文件":
+                elif self.save_mode_choice.get() in ["存文件", "File"]:
                     with open(self.FILE.get(), "w", encoding="utf-8") as f:
                         f.write("ip ,name\n")
                         for each_dic in zoomeye_domain_ip.info_list:
                             self.TREEVIEW.insert("", tk.END, values=(j, each_dic['ip'], each_dic['name'], None))
                             f.write(f'''{str(each_dic["ip"])},{each_dic["name"]}\n''')
                             j += 1
-                elif self.save_mode_choice.get() == "不保存":
+                elif self.save_mode_choice.get() in ["不保存", "NotSave"]:
                     for each_dic in zoomeye_domain_ip.info_list:
                         self.TREEVIEW.insert("", tk.END, values=(j, each_dic['ip'], each_dic['name'], None))
                         j += 1
 
-            if self.query_mode_choice.get() == 'web应用':
+            if self.query_mode_choice.get() in ['web应用', 'WebApp']:
                 zoomeye_websearch.headers = self.zoomeye_headers
                 error_info = zoomeye_websearch.web_search(query=query, page=self.page_choice.get(),
                                                           thread=int(self.thread_choice.get()))
@@ -727,7 +825,7 @@ https://hunter.qianxin.com/"""
                             f'''INSERT INTO zoomeye_web_search VALUES("{each_dic["ip"]}","{each_dic["site"]}","{each_dic["title"]}","{each_dic["city"]}","{each_dic["country"]}","{each_dic["continent"]}","{each_dic['isp']}");''')
                         self.sqlite_conn.commit()
                         j += 1
-                elif self.save_mode_choice.get() == "存文件":
+                elif self.save_mode_choice.get() in ["存文件", "File"]:
                     with open(self.FILE.get(), "w", encoding="utf-8") as f:
                         f.write("ip ,site ,title ,city ,country ,continents, isp\n")
                         for each_dic in zoomeye_websearch.info_list:
@@ -736,14 +834,14 @@ https://hunter.qianxin.com/"""
                             f.write(
                                 f'''{each_dic["ip"]},{each_dic["site"]},{each_dic["title"]},{each_dic["city"]},{each_dic["country"]},{each_dic["continent"]},{each_dic['isp']}\n''')
                             j += 1
-                elif self.save_mode_choice.get() == "不保存":
+                elif self.save_mode_choice.get() in ["不保存", "NotSave"]:
                     for each_dic in zoomeye_websearch.info_list:
                         self.TREEVIEW.insert("", tk.END,
                                              values=(j, each_dic['ip'], each_dic['site'], '', each_dic['title']))
                         j += 1
 
             zoomeye_resource.headers = self.zoomeye_headers
-            if self.query_mode_choice.get() == '个人信息':
+            if self.query_mode_choice.get() in ['个人信息', 'Account']:
                 self.log_insert(zoomeye_resource.resource(mode="complete"))
             else:
                 self.log_insert(
@@ -753,7 +851,7 @@ https://hunter.qianxin.com/"""
         # fofa
         elif self.search_engine_choice.get() == "Fofa":
             self.log_insert('[Fofa] Start searching...\n')
-            if self.query_mode_choice.get() == "个人信息":
+            if self.query_mode_choice.get() in ["个人信息", "Account"]:
                 text = fofa_resource.fofa_search_resource(email=self.dic['fofa_username'], key=self.dic['fofa_api'])
                 self.log_insert(text)
             else:
@@ -788,14 +886,14 @@ https://hunter.qianxin.com/"""
                                            "{each['ip']}","{each['port']}","{each['host']}","{each['domain']}","{each['os']}","{each['server']}","{each['title']}","{each['protocol']}","{each['country_name']}","{each['region']}","{each['city']}","{each['as_organization']}","{each['icp']}","{each['jarm']}"
                                        )''')
                         self.sqlite_conn.commit()
-                elif self.save_mode_choice.get() == "存文件":
+                elif self.save_mode_choice.get() in ["存文件", "File"]:
                     with open(self.FILE.get(), "w", encoding="utf-8") as f:
                         f.write(
                             "ip,port,host,domain,os,server,title,protocol,country_name,region,city,as_organization,icp,jarm\n")
                         for each_dic in fofa_search_all.info_list:
                             f.write(
                                 f"{each_dic['ip']},{each_dic['port']},{each_dic['host']},{each_dic['domain']},{each_dic['os']},{each_dic['server']},{each_dic['title']},{each_dic['protocol']},{each_dic['country_name']},{each_dic['region']},{each_dic['city']},{each_dic['as_organization']},{each_dic['icp']},{each_dic['jarm']}\n")
-                elif self.save_mode_choice.get() == "不保存":
+                elif self.save_mode_choice.get() in ["不保存", "NotSave"]:
                     pass
                 self.log_insert(
                     f'[Fofa] End of Search. Obtain totally {fofa_search_all.total_num}\nComplete information has been stored by mode "{self.save_mode_choice.get()}".\n')
@@ -804,21 +902,21 @@ https://hunter.qianxin.com/"""
         elif self.search_engine_choice.get() == "Quake":
             self.log_insert('[Quake] Start searching...\n')
             query = self.QUERY.get()
-            if self.query_mode_choice.get() != '个人信息':
+            if self.query_mode_choice.get() not in ['个人信息', 'Account']:
                 self.delete_tree(self.TREEVIEW)
-            if self.query_mode_choice.get() == "主机搜索":
+            if self.query_mode_choice.get() in ["主机搜索", "HostSearch"]:
                 error_info = quake_hostsearch.quake_host_search(query=query, page=self.page_choice.get(),
                                                                 key=self.dic['quake_api'])
                 if error_info is not None:
                     self.log_insert(f'[!] Error: {error_info}\n')
 
                 j = 1
-                if self.save_mode_choice.get() == "不保存":
+                if self.save_mode_choice.get() in ["不保存", "NotSave"]:
                     for each_dic in quake_hostsearch.info_list:
                         self.TREEVIEW.insert("", tk.END, values=(
                             j, each_dic['ip'], each_dic['service_port'], each_dic['os_name'], ''))
                         j += 1
-                elif self.save_mode_choice.get() == "存文件":
+                elif self.save_mode_choice.get() in ["存文件", "File"]:
                     with open(self.FILE.get(), "w", encoding="utf-8") as f:
                         f.write(
                             "ip,service_port,service_name,service_version,service_id,domains,hostname,os_name,os_version,country_en,city_en\n")
@@ -850,19 +948,19 @@ https://hunter.qianxin.com/"""
                             f'''INSERT INTO quake_host_search VALUES("{each_dic["ip"]}","{each_dic["service_port"]}","{each_dic["service_name"]}","{each_dic["service_version"]}","{each_dic["service_id"]}","{each_dic["domains"]}","{each_dic["hostname"]}","{each_dic["os_name"]}","{each_dic["os_version"]}","{each_dic["country_en"]}","{each_dic["city_en"]}")''')
                         self.sqlite_conn.commit()
                         j += 1
-            if self.query_mode_choice.get() == "服务搜索":
+            if self.query_mode_choice.get() in ["服务搜索", "Service"]:
                 error_info = quake_servicesearch.quake_service_search(query=query, page=self.page_choice.get(),
                                                                       key=self.dic['quake_api'])
                 if error_info is not None:
                     self.log_insert(f'[!] Error: {error_info}\n')
 
                 j = 1
-                if self.save_mode_choice.get() == "不保存":
+                if self.save_mode_choice.get() in ["不保存", "NotSave"]:
                     for each_dic in quake_servicesearch.info_list:
                         self.TREEVIEW.insert("", tk.END, values=(
                             j, each_dic['ip'], each_dic['port'], each_dic['os_name'], each_dic['service_title']))
                         j += 1
-                elif self.save_mode_choice.get() == "存文件":
+                elif self.save_mode_choice.get() in ["存文件", "File"]:
                     with open(self.FILE.get(), "w", encoding="utf-8") as f:
                         f.write(
                             "ip,port,org,hostname,service_title,service_server,transport,os_name,os_version,service_name,country_en,city_en\n")
@@ -894,7 +992,7 @@ https://hunter.qianxin.com/"""
                             f'''INSERT INTO quake_service_search VALUES("{each_dic["ip"]}","{each_dic["port"]}","{each_dic["org"]}","{each_dic["hostname"]}","{each_dic["service_title"]}","{each_dic["service_server"]}","{each_dic["transport"]}","{each_dic["os_name"]}","{each_dic["service_name"]}","{each_dic["country_en"]}","{each_dic["city_en"]}","{each_dic["os_version"]}")''')
                         self.sqlite_conn.commit()
                         j += 1
-            if self.query_mode_choice.get() == "个人信息":
+            if self.query_mode_choice.get() in ['个人信息', 'Account']:
                 text = quake_resource.quake_resource_search(key=self.dic['quake_api'], mode="complete")
                 self.log_insert(text)
             else:
@@ -907,20 +1005,20 @@ https://hunter.qianxin.com/"""
             self.delete_tree(self.TREEVIEW)
             self.log_insert('[Shodan] Start searching...\n')
             query = self.QUERY.get()
-            if self.query_mode_choice.get() == "数据搜索":
+            if self.query_mode_choice.get() in ["数据搜索", "Data"]:
                 error_info = shodan_search.search(key=self.dic['shodan_api'], query=str(query),
                                                   page=self.page_choice.get())
                 if error_info is not None:
                     self.log_insert(f'[!] Error: {error_info}\n')
 
                 j = 1
-                if self.save_mode_choice.get() == "不保存":
+                if self.save_mode_choice.get() in ["不保存", "NotSave"]:
                     for each_dic in shodan_search.info_list:
                         self.TREEVIEW.insert("", tk.END, values=(
                             j, each_dic['ip'], str(each_dic['port']) + "/" + str(each_dic['domains']), each_dic['os'],
                             each_dic['title']))
                         j += 1
-                elif self.save_mode_choice.get() == "存文件":
+                elif self.save_mode_choice.get() in ["存文件", "File"]:
                     with open(self.FILE.get(), "w", encoding="utf-8") as f:
                         f.write(
                             "ip,port,domains,title,product,os,info,isp,country,city,timestamp\n")
@@ -960,25 +1058,25 @@ https://hunter.qianxin.com/"""
                 self.log_insert(
                     f'[Shodan] End of search. Complete information has been stored by mode "{self.save_mode_choice.get()}".\n')
 
-
+        # Hunter
         elif self.search_engine_choice.get() == "Hunter":
             self.delete_tree(self.TREEVIEW)
             self.log_insert('[Hunter] Start searching...\n')
             query = self.QUERY.get()
-            if self.query_mode_choice.get() == "数据搜索":
+            if self.query_mode_choice.get() in ["数据搜索", "Data"]:
                 error_info = hunter_search.search(key=self.dic['hunter_api'], query=str(query),
                                                   page=self.page_choice.get())
                 if error_info is not None:
                     self.log_insert(f'[!] Error: {error_info}\n')
 
                 j = 1
-                if self.save_mode_choice.get() == "不保存":
+                if self.save_mode_choice.get() in ["不保存", "NotSave"]:
                     for each_dic in hunter_search.info_list:
                         self.TREEVIEW.insert("", tk.END, values=(
                             j, each_dic['ip'], str(each_dic['port']) + "/" + str(each_dic['domain']), each_dic['os'],
                             each_dic['web_title']))
                         j += 1
-                elif self.save_mode_choice.get() == "存文件":
+                elif self.save_mode_choice.get() in ["存文件", "File"]:
                     with open(self.FILE.get(), "w", encoding="utf-8") as f:
                         f.write(
                             "url,ip,port,web_title,domain,is_risk_protocol,protocol,base_protocol,status_code,component,os,company,number,country,province,city,updated_at,is_web,as_org,isp,vul_list,is_risk\n")
@@ -1020,9 +1118,14 @@ https://hunter.qianxin.com/"""
 
 if __name__ == '__main__':
     root = tk.Tk()
-    root.geometry('793x526+320+100')
-    root.minsize(width=793, height=526)
-    root.maxsize(width=793, height=526)
+    if "darwin" in sys.platform:
+        root.geometry('793x526+320+100')
+    else:
+        # HiDPI
+        ctypes.windll.shcore.SetProcessDpiAwareness(1)
+        ScaleFactor = ctypes.windll.shcore.GetScaleFactorForDevice(0)
+        root.tk.call('tk', 'scaling', ScaleFactor / 75)
+    root.resizable(True, False)
     root.title(f'ThunderSearch {VERSION}  --xzajyjs')
     Application(master=root)
     root.mainloop()
