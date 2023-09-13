@@ -25,7 +25,7 @@ ThunderSearch（闪电搜索器）是一款使用多个(目前支持`Fofa`、`Sh
 
 #### 配置文件`config.json`说明
 ```
-"language": "ch"
+"language": "en"
 "zoomeye_username": ""
 "zoomeye_password": ""
 "zoomeye_api": ""

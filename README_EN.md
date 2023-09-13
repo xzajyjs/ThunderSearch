@@ -25,7 +25,7 @@ ThunderSearch is an information collection tool with GUI interface developed usi
 
 #### `config.json`
 ```
-"language": "ch"
+"language": "en"
 "zoomeye_username": ""
 "zoomeye_password": ""
 "zoomeye_api": ""
