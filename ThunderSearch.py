@@ -640,7 +640,7 @@ https://hunter.qianxin.com/"""
                 elif self.dic['zoomeye_username'] != "" and self.dic['zoomeye_password'] != "":
                     self.zoomeye_user_pass_login(self.dic['zoomeye_username'], self.dic['zoomeye_password'])
                 else:
-                    messagebox.showerror(title='Error', message='请填写Zoomeye配置信息')
+                    messagebox.showerror(title='Error', message='请填写Zoomeye配置信息' if self.language == 'ch' else 'Please fill in Zoomeye config.')
 
     def zoomeye_api_key_login(self, api_key):
         self.zoomeye_headers = {
@@ -667,7 +667,6 @@ https://hunter.qianxin.com/"""
             self.zoomeye_headers = {
                 'Authorization': 'JWT ' + access_token
             }
-            # print(self.zoomeye_headers['Authorization'])
             self.log_insert(
                 f"[+] Access_Token: {self.zoomeye_headers['Authorization'][:7] + '*' * 10 + self.zoomeye_headers['Authorization'][-3:]}\n")
 
@@ -679,18 +678,18 @@ https://hunter.qianxin.com/"""
                                                 port=int(self.dic['port']), user=self.dic['username'],
                                                 password=self.dic['password'])
                 except Exception as e:
-                    messagebox.showerror(title='Error', message=f'[!] 数据库连接失败! {e}')
+                    messagebox.showerror(title='Error', message=f'[!] mysql数据库连接失败! {e}' if self.language == 'ch' else f'[!] Fail to connect to MySQL. {e}')
                     return
                 else:
-                    self.log_insert('[+] 数据库连接成功\n')
+                    self.log_insert('[+] 数据库连接成功\n' if self.language == 'ch' else '[+] Connect to MySQL successfully.\n')
                     self.cursor = self.conn.cursor()
             elif self.save_mode_choice.get() in ["存文件", "File"] and self.FILE.get() == "":
-                messagebox.showerror(title='Error', message='[!] 文件名为空!')
+                messagebox.showerror(title='Error', message='[!] 文件名为空!' if self.language == 'ch' else '[!] File name empty.')
                 return
             t = Thread(target=self.run, daemon=True)
             t.start()
         else:
-            messagebox.showerror(title='Error', message='[!] 查询语句为空!')
+            messagebox.showerror(title='Error', message='[!] 查询语句为空!' if self.language == 'ch' else '[!] Query empty.')
 
     def run(self):
         if self.save_mode_choice.get() == "sqlite":
