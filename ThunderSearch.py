@@ -49,9 +49,10 @@ class Application(tk.Frame):
         self.checkUpdate()
 
     def checkUpdate(self):
+        resp = {'message': ''}
         url = "https://api.github.com/repos/xzajyjs/ThunderSearch/releases/latest"
         try:
-            resp = requests.get(url, timeout=3).json()
+            resp = requests.get(url, timeout=5).json()
             latest_version, latest_version_url = resp['name'], resp['html_url']
             if VERSION != latest_version:
                 self.log_insert(f'[!] Update to new version {latest_version}: {latest_version_url}\n')

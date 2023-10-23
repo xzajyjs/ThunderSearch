@@ -6,13 +6,14 @@ Usage:
 """
 
 from setuptools import setup
+from ThunderSearch import VERSION
 
 APP = ['ThunderSearch.py']
 DATA_FILES = []
 OPTIONS = {
-    'iconfile': 'LOGO.jpeg',
+    'iconfile': 'LOGO.icns',
     'plist': {
-        'CFBundleShortVersionString': '2.5.0',
+        'CFBundleShortVersionString': VERSION,
         'NSHumanReadableCopyright': 'Copyright © 2023 xzajyjs All rights reserved.',
     }
 }
