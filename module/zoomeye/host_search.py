@@ -30,13 +30,22 @@ def host_search_threadpool(query, page):
         if "'error': '" in str(matches):
             return matches['message']
         for each in matches['matches']:
+            title_value = each.get('portinfo', {}).get('title', None)
+            # 检查 title_value 是否可迭代（列表或元组）
+            if isinstance(title_value, (list, tuple)):
+                # 如果可迭代，使用 join 方法连接成字符串
+                joined_title = ';'.join(map(str, title_value))
+            else:
+                # 如果不可迭代，使用原始值（或某个默认值）
+                joined_title = str(title_value)
             each_dic = {
                 'ip': each.get('ip', None),
                 'port': each.get('portinfo', {}).get('port', None),
                 'os': each.get('portinfo', {}).get('os', None),
                 'app': each.get('portinfo', {}).get('app', None),
                 'version': each.get('portinfo', {}).get('version', None),
-                'title': ';'.join(each.get('portinfo', {}).get('title', None)),
+                # 'title': ';'.join(each.get('portinfo', {}).get('title', None)),
+                'title': joined_title,
                 'city': each.get('geoinfo', {}).get('city', {}).get('names', {}).get('en', None),
                 'country': each.get('geoinfo', {}).get('country', {}).get('names', {}).get('en', None),
                 'continent': each.get('geoinfo', {}).get('continent', {}).get('names', {}).get('en', None)
