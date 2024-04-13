@@ -49,7 +49,7 @@ ThunderSearch（闪电搜索器）是一款使用多个(目前支持`Fofa`、`Sh
 pip3 install -r requirements.txt
 python3 ThunderSearch.py
 ```
-> Recommend Python version: 3.8+
+> 推荐Python版本: 3.9，3.10，3.12（注意，3.11在Mac Sonoma上可能会出现bug）
 ---
 ## 📡 支持统计内容
 

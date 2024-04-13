@@ -49,7 +49,7 @@ ThunderSearch is an information collection tool with GUI interface developed usi
 pip3 install -r requirements.txt
 python3 ThunderSearch.py
 ```
-> Recommend Python version: 3.8+
+> Recommend Python version: 3.9, 3.10, 3.12（notice: 3.11 is not recommended on Mac Sonoma）
 ---
 ## 📡 Statistical content
 
