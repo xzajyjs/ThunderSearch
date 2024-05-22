@@ -1,6 +1,6 @@
 requests
 tk==0.1.0
-PyMySQL==1.0.2
+PyMySQL==1.1.1
 shodan
 chardet
 setuptools
