@@ -1,2 +1,0 @@
-[console_scripts]
-modulegraph = modulegraph.__main__:main

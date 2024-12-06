@@ -15,7 +15,8 @@ OPTIONS = {
     'plist': {
         'CFBundleShortVersionString': VERSION,
         'NSHumanReadableCopyright': 'Copyright © 2023 xzajyjs All rights reserved.',
-    }
+    },
+    'arch': 'universal2'
 }
 
 setup(

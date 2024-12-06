@@ -1,3 +1,0 @@
-"""
-Resource data converters
-"""

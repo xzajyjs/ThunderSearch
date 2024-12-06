@@ -5,3 +5,5 @@ dist/
 build/
 todo.md
 ThunderSearch.dmgcanvas
+.eggs/
+__pycache__

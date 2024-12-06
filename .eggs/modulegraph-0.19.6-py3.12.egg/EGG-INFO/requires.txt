@@ -1,2 +1,0 @@
-altgraph>=0.15
-setuptools
